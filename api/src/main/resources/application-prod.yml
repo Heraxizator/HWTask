@@ -4,6 +4,13 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
 
+hwtask:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  storage:
+    attachments-dir: ${HWTASK_ATTACHMENTS_DIR:/data/attachments}
+
 management:
   server:
     port: ${MANAGEMENT_PORT:8081}

@@ -10,6 +10,14 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
 
+# Секреты только из окружения (см. compose / .env). Без JWT_SECRET приложение не стартует.
+hwtask:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  storage:
+    attachments-dir: /data/attachments
+
 management:
   server:
     port: 8080

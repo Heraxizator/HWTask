@@ -17,12 +17,21 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
 
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+# Секреты JWT и путь вложений задаются в профильных файлах (dev / docker / prod / test), не здесь.
+hwtask:
+  reminders:
+    poll-interval-ms: 60000
 
 logging:
   pattern:

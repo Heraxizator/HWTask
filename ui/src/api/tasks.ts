@@ -4,11 +4,12 @@ import type {
   TaskResponse,
   UpdateTaskRequest,
 } from '../types/task';
-import { fetchJson, parseJsonResponse } from './http';
+import { fetchJson, fetchVoid } from './http';
 
 const BASE = '/api/v1/tasks';
 
 export interface ListTasksParams {
+  projectId: string;
   page?: number;
   size?: number;
   sort?: string;
@@ -16,12 +17,11 @@ export interface ListTasksParams {
 
 export function listTasks(params: ListTasksParams): Promise<PageTaskResponse> {
   const sp = new URLSearchParams();
+  sp.set('projectId', params.projectId);
   if (params.page !== undefined) sp.set('page', String(params.page));
   if (params.size !== undefined) sp.set('size', String(params.size));
   if (params.sort) sp.set('sort', params.sort);
-  const q = sp.toString();
-  const url = q ? `${BASE}?${q}` : BASE;
-  return fetchJson<PageTaskResponse>(url);
+  return fetchJson<PageTaskResponse>(`${BASE}?${sp.toString()}`);
 }
 
 export function getTask(id: string): Promise<TaskResponse> {
@@ -47,11 +47,6 @@ export function updateTask(
   });
 }
 
-export async function deleteTask(id: string): Promise<void> {
-  const res = await fetch(`${BASE}/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-    headers: { Accept: 'application/json' },
-  });
-  if (res.ok && res.status === 204) return;
-  await parseJsonResponse<unknown>(res);
+export function deleteTask(id: string): Promise<void> {
+  return fetchVoid(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

@@ -1,6 +1,9 @@
-spring:
-  docker:
-    compose:
-      enabled: false
-  jpa:
-    show-sql: false
+hwtask:
+  jwt:
+    secret: 01234567890123456789012345678901234567890123456789012345678901234
+    expiration-ms: 86400000
+  storage:
+    attachments-dir: ${java.io.tmpdir}/hwtask-test-attachments
+  security:
+    # Для большинства интеграционных тестов — без JWT; для проверки 401 см. UnauthorizedApiIntegrationTest.
+    relaxed-authorization: true

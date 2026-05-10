@@ -29,6 +29,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-hwtask}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-hwtask}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      # Обязателен непустой секрет; иначе Spring не сможет создать JwtProperties (см. .env.example).
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env e.g. openssl rand -base64 48}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+    volumes:
+      - hwtask_app_data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,3 +55,4 @@ services:
 
 volumes:
   postgres_data: {}
+  hwtask_app_data: {}

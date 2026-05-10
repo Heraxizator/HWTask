@@ -1,5 +1,19 @@
 import type { ProblemDetailBody } from '../types/task';
 
+export const TOKEN_STORAGE_KEY = 'hwtask_token';
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+
+export function setStoredToken(token: string): void {
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+}
+
+export function clearStoredToken(): void {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly problem?: ProblemDetailBody;
@@ -43,16 +57,35 @@ export async function parseJsonResponse<T>(res: Response): Promise<T> {
   return body as T;
 }
 
+function authHeaders(init?: HeadersInit): Headers {
+  const headers = new Headers(init);
+  const token = getStoredToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json');
+  }
+  return headers;
+}
+
 export async function fetchJson<T>(
   input: RequestInfo,
   init?: RequestInit,
 ): Promise<T> {
   const res = await fetch(input, {
     ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers: authHeaders(init?.headers),
   });
   return parseJsonResponse<T>(res);
+}
+
+/** DELETE / 204 без тела */
+export async function fetchVoid(input: RequestInfo, init?: RequestInit): Promise<void> {
+  const res = await fetch(input, {
+    ...init,
+    headers: authHeaders(init?.headers),
+  });
+  if (res.ok && res.status === 204) return;
+  await parseJsonResponse<unknown>(res);
 }

@@ -1,6 +1,10 @@
 # HWTask
 
-Монорепозиторий: **`api/`** — REST API на Spring Boot (**Java 25**), **`ui/`** — SPA (**React + TypeScript + Vite**) с интерфейсом задач. Данные в **PostgreSQL**, схема через **Flyway**, модульная структура — **Spring Modulith**, описание HTTP API — **OpenAPI / Swagger UI**.
+Монорепозиторий **HWTask**: **`api/`** — REST API на Spring Boot (**Java 25**), **`ui/`** — SPA (**React + TypeScript + Vite**). Данные в **PostgreSQL**, схема через **Flyway**, описание HTTP API — **OpenAPI / Swagger UI**.
+
+Функциональность в духе Bitrix24-задач: **организации и проекты**, **участники и роли**, **JWT-аутентификация**, **задачи с исполнителем, сроком и подзадачами**, **соисполнители и наблюдатели**, **комментарии, вложения, лента активности**, **напоминания и простые правила автоматизации**, **сводка по задачам**.
+
+В профилях **`dev`**, **`docker`** и **`test`** при пустой базе создаётся демо-пользователь **`demo@hwtask.local` / `demo`** и проект «Основной проект».
 
 ## Структура
 
@@ -15,7 +19,7 @@
 
 | Компонент | Технология |
 |-----------|------------|
-| API | Java 25, Spring Boot 4, Spring MVC, Jakarta Validation |
+| API | Java 25, Spring Boot 4, Spring MVC, Spring Security, JWT, Jakarta Validation |
 | UI | React 19, TypeScript, Vite, TanStack Query |
 | Данные | Spring Data JPA, PostgreSQL, Flyway |
 | Документация API | springdoc-openapi |
@@ -33,7 +37,7 @@
 
 ```bash
 cp .env.example .env
-# Отредактируйте .env — задайте POSTGRES_PASSWORD и при необходимости порты
+# Обязательно задайте JWT_SECRET (openssl rand -base64 48) и пароль БД; без JWT_SECRET API не стартует.
 docker compose up --build
 ```
 
@@ -59,7 +63,7 @@ npm ci
 npm run dev
 ```
 
-Vite по умолчанию слушает порт **5173** и проксирует `/api` на `http://127.0.0.1:8080`. Запустите API отдельно (профиль **`dev`**, CORS для `http://localhost:5173` задан в [`DevCorsConfiguration`](api/src/main/java/org/example/hwtaskbackend/config/DevCorsConfiguration.java)). При другом адресе API задайте переменную `VITE_API_PROXY_TARGET` или измените [`ui/vite.config.ts`](ui/vite.config.ts).
+Vite по умолчанию слушает порт **5173** и проксирует `/api` на `http://127.0.0.1:8080`. Запустите API отдельно (профиль **`dev`**, CORS для `http://localhost:5173` задан в [`DevCorsConfiguration`](api/src/main/java/org/example/hwtask/config/DevCorsConfiguration.java)). При другом адресе API задайте переменную `VITE_API_PROXY_TARGET` или измените [`ui/vite.config.ts`](ui/vite.config.ts).
 
 ## Только PostgreSQL в Docker, API локально
 
@@ -76,20 +80,29 @@ docker compose up postgres
 
 JDBC: `jdbc:postgresql://localhost:<POSTGRES_PORT>/<POSTGRES_DB>` — те же `POSTGRES_*`, что в `.env`.
 
-## Переменные окружения (`.env`)
+## Переменные окружения и секреты
 
-Используются при `docker compose up`. Шаблон — [`.env.example`](.env.example).
+Шаблон — [`.env.example`](.env.example). Файл `.env` не коммитится ([`.gitignore`](.gitignore)).
+
+**Где что задаётся**
+
+- В **[`application.yml`](api/src/main/resources/application.yml)** секретов JWT **нет** — только общие нечувствительные настройки (например интервал напоминаний).
+- Профиль **`dev`** ([`application-dev.yml`](api/src/main/resources/application-dev.yml)): локальный дефолт JWT только для разработки (`JWT_SECRET` можно переопределить через окружение).
+- Профили **`docker`** и **`prod`**: `JWT_SECRET` и строка БД — **только из переменных окружения**, без дефолтов в YAML.
+
+**Docker Compose:** перед `docker compose up` скопируйте `.env.example` → `.env` и задайте **`JWT_SECRET`** (длинная случайная строка) и **`POSTGRES_PASSWORD`**. Без `JWT_SECRET` сервис `api` не получит ключ подписи и не стартует.
 
 | Переменная | Назначение |
 |------------|------------|
 | `POSTGRES_DB` | Имя базы |
 | `POSTGRES_USER` | Пользователь БД |
-| `POSTGRES_PASSWORD` | Пароль (смените с примера) |
+| `POSTGRES_PASSWORD` | Пароль БД (**обязательно смените**) |
 | `POSTGRES_PORT` | Проброс Postgres на хост (по умолчанию `5432`) |
 | `API_PORT` | Проброс REST/Swagger (по умолчанию `8080`) |
 | `UI_PORT` | Проброс веб-интерфейса (по умолчанию `3000`) |
-
-Файл `.env` не коммитится ([`.gitignore`](.gitignore)).
+| `JWT_SECRET` | Подпись JWT (**обязательно для Compose и prod**) |
+| `JWT_EXPIRATION_MS` | Опционально, время жизни токена |
+| `HWTASK_ATTACHMENTS_DIR` | Каталог вложений (prod/docker при необходимости) |
 
 ## Профили Spring
 

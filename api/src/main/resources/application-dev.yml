@@ -9,6 +9,14 @@ spring:
       hibernate:
         format_sql: true
 
+# Локальная разработка: можно задать JWT_SECRET в .env / окружении; иначе — слабый dev-дефолт (только для dev).
+hwtask:
+  jwt:
+    secret: ${JWT_SECRET:LOCAL_DEV_ONLY_01234567890123456789012345678901234567890123456789012345678901234}
+    expiration-ms: 86400000
+  storage:
+    attachments-dir: ${HWTASK_ATTACHMENTS_DIR:./data/attachments}
+
 management:
   endpoints:
     web:
