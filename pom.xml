@@ -9,10 +9,10 @@
         <relativePath/>
     </parent>
     <groupId>org.example</groupId>
-    <artifactId>HWTask-Backend</artifactId>
+    <artifactId>hwtask</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>HWTask-Backend</name>
-    <description>HWTask-Backend</description>
+    <name>HWTask</name>
+    <description>HWTask — REST API для управления задачами (Spring Boot)</description>
     <properties>
         <java.version>25</java.version>
         <spring-modulith.version>2.0.6</spring-modulith.version>

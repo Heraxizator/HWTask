@@ -1,6 +1,6 @@
 spring:
   application:
-    name: HWTask-Backend
+    name: HWTask
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   jackson:
