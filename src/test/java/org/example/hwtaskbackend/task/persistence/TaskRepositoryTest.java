@@ -32,4 +32,22 @@ class TaskRepositoryTest {
         assertThat(taskRepository.findById(saved.getId())).isPresent();
         assertThat(taskRepository.findAll()).hasSize(1);
     }
+
+    @Test
+    void deleteRemovesEntity() {
+        Task saved = taskRepository.save(new Task("Temp", null, TaskStatus.TODO, null));
+        var id = saved.getId();
+
+        taskRepository.deleteById(id);
+
+        assertThat(taskRepository.findById(id)).isEmpty();
+    }
+
+    @Test
+    void saveTwoTasksListsBoth() {
+        taskRepository.save(new Task("A", null, TaskStatus.TODO, null));
+        taskRepository.save(new Task("B", null, TaskStatus.IN_PROGRESS, null));
+
+        assertThat(taskRepository.findAll()).hasSize(2);
+    }
 }

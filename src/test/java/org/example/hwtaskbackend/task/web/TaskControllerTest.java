@@ -95,6 +95,17 @@ class TaskControllerTest {
     }
 
     @Test
+    void createWithBlankTitleReturns400WithErrors() throws Exception {
+        mockMvc.perform(post("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"","description":null,"status":"TODO","priority":null}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.title").exists());
+    }
+
+    @Test
     void putUpdates() throws Exception {
         UUID id = UUID.randomUUID();
         OffsetDateTime t = OffsetDateTime.ofInstant(java.time.Instant.parse("2025-01-01T00:00:00Z"), ZoneOffset.UTC);

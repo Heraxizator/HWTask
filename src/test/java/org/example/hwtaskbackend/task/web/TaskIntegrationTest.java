@@ -14,9 +14,13 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -72,5 +76,54 @@ class TaskIntegrationTest {
                 .andExpect(jsonPath("$.title").value("Hello"));
 
         assertThat(id).isNotBlank();
+    }
+
+    @Test
+    void getMissingReturns404ProblemDetail() throws Exception {
+        mockMvc.perform(get("/api/v1/tasks/" + UUID.randomUUID()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.title").value("Not Found"));
+    }
+
+    @Test
+    void createWithBlankTitleReturns400() throws Exception {
+        mockMvc.perform(post("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"","description":null,"status":"TODO","priority":null}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.title").exists());
+    }
+
+    @Test
+    void updateThenDeleteReturns404OnGet() throws Exception {
+        String json = mockMvc.perform(post("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Original","description":null,"status":"TODO","priority":null}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String id = objectMapper.readTree(json).get("id").asText();
+
+        mockMvc.perform(put("/api/v1/tasks/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Updated","description":"x","status":"DONE","priority":"LOW"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Updated"))
+                .andExpect(jsonPath("$.status").value("DONE"));
+
+        mockMvc.perform(delete("/api/v1/tasks/" + id))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/tasks/" + id))
+                .andExpect(status().isNotFound());
     }
 }
