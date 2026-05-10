@@ -1,0 +1,8 @@
+target/
+.git/
+.idea/
+*.iml
+.cursor/
+HELP.md
+.dockerignore
+node_modules/

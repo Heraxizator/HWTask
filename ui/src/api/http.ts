@@ -1,0 +1,58 @@
+import type { ProblemDetailBody } from '../types/task';
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly problem?: ProblemDetailBody;
+
+  constructor(message: string, status: number, problem?: ProblemDetailBody) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.problem = problem;
+  }
+}
+
+function readProblemMessage(body: unknown): string | undefined {
+  if (!body || typeof body !== 'object') return undefined;
+  const p = body as ProblemDetailBody;
+  if (typeof p.detail === 'string' && p.detail.trim()) return p.detail;
+  if (typeof p.title === 'string' && p.title.trim()) return p.title;
+  return undefined;
+}
+
+export async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  const body = text ? (JSON.parse(text) as unknown) : undefined;
+
+  if (!res.ok) {
+    const fromBody =
+      body !== undefined && body !== null
+        ? readProblemMessage(body)
+        : undefined;
+    const msg: string =
+      fromBody?.trim() ||
+      res.statusText?.trim() ||
+      `HTTP ${res.status}`;
+    const problem =
+      body && typeof body === 'object' && 'status' in (body as object)
+        ? (body as ProblemDetailBody)
+        : undefined;
+    throw new ApiError(msg, res.status, problem);
+  }
+
+  return body as T;
+}
+
+export async function fetchJson<T>(
+  input: RequestInfo,
+  init?: RequestInit,
+): Promise<T> {
+  const res = await fetch(input, {
+    ...init,
+    headers: {
+      Accept: 'application/json',
+      ...(init?.headers ?? {}),
+    },
+  });
+  return parseJsonResponse<T>(res);
+}

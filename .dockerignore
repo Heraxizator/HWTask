@@ -1,8 +1,10 @@
-target/
-.git/
-.idea/
+.git
+.idea
+.cursor
+**/target/
+**/node_modules/
+**/.mvn/wrapper/maven-wrapper.jar
+api/.mvn/wrapper/maven-wrapper.jar
 *.iml
-.cursor/
 HELP.md
-.dockerignore
-Dockerfile
+ui/dist
