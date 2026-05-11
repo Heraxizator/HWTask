@@ -75,6 +75,7 @@ async function retryOnceAfterRefresh<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) {
+      // avoid recursion for auth endpoints
       await refreshSession();
       return await fn();
     }
@@ -86,19 +87,24 @@ export async function fetchJson<T>(
   input: RequestInfo,
   init?: RequestInit,
 ): Promise<T> {
-  return retryOnceAfterRefresh(async () => {
+  const url = typeof input === 'string' ? input : input.toString();
+  const shouldRetry = !url.startsWith('/api/v1/auth/');
+  const run = async () => {
     const res = await fetch(input, {
       ...init,
       credentials: 'include',
       headers: authHeaders(init?.headers),
     });
     return parseJsonResponse<T>(res);
-  });
+  };
+  return shouldRetry ? retryOnceAfterRefresh(run) : run();
 }
 
 /** DELETE / 204 без тела */
 export async function fetchVoid(input: RequestInfo, init?: RequestInit): Promise<void> {
-  return retryOnceAfterRefresh(async () => {
+  const url = typeof input === 'string' ? input : input.toString();
+  const shouldRetry = !url.startsWith('/api/v1/auth/');
+  const run = async () => {
     const res = await fetch(input, {
       ...init,
       credentials: 'include',
@@ -106,12 +112,15 @@ export async function fetchVoid(input: RequestInfo, init?: RequestInit): Promise
     });
     if (res.ok && res.status === 204) return;
     await parseJsonResponse<unknown>(res);
-  });
+  };
+  return shouldRetry ? retryOnceAfterRefresh(run) : run();
 }
 
 /** Авторизованный fetch бинарного ответа (скачивание вложений). */
 export async function fetchBlob(input: RequestInfo, init?: RequestInit): Promise<Blob> {
-  return retryOnceAfterRefresh(async () => {
+  const url = typeof input === 'string' ? input : input.toString();
+  const shouldRetry = !url.startsWith('/api/v1/auth/');
+  const run = async () => {
     const res = await fetch(input, {
       ...init,
       credentials: 'include',
@@ -141,7 +150,8 @@ export async function fetchBlob(input: RequestInfo, init?: RequestInit): Promise
       throw new ApiError(msg, res.status, problem);
     }
     return res.blob();
-  });
+  };
+  return shouldRetry ? retryOnceAfterRefresh(run) : run();
 }
 
 /** POST multipart/form-data (поле Content-Type задаёт браузер). */
@@ -150,8 +160,11 @@ export async function fetchJsonMultipart<T>(
   formData: FormData,
 ): Promise<T> {
   const headers = authHeaders();
-  return retryOnceAfterRefresh(async () => {
+  const url = typeof input === 'string' ? input : input.toString();
+  const shouldRetry = !url.startsWith('/api/v1/auth/');
+  const run = async () => {
     const res = await fetch(input, { method: 'POST', credentials: 'include', headers, body: formData });
     return parseJsonResponse<T>(res);
-  });
+  };
+  return shouldRetry ? retryOnceAfterRefresh(run) : run();
 }
