@@ -2,6 +2,7 @@ package org.example.hwtask.task.dto;
 
 import org.example.hwtask.task.dto.response.TaskMemberEntryResponse;
 import org.example.hwtask.task.dto.response.TaskResponse;
+import org.example.hwtask.task.dto.response.TaskTagResponse;
 import org.example.hwtask.task.persistence.Task;
 import org.example.hwtask.task.persistence.TaskMember;
 
@@ -15,10 +16,14 @@ public final class TaskDtoMapper {
     }
 
     public static TaskResponse toResponse(Task task) {
-        return toResponse(task, List.of());
+        return toResponse(task, List.of(), List.of());
     }
 
     public static TaskResponse toResponse(Task task, List<TaskMember> extraMembers) {
+        return toResponse(task, extraMembers, List.of());
+    }
+
+    public static TaskResponse toResponse(Task task, List<TaskMember> extraMembers, List<TaskTagResponse> tags) {
         return new TaskResponse(
                 task.getId(),
                 task.getProjectId(),
@@ -34,7 +39,8 @@ public final class TaskDtoMapper {
                 toUtc(task.getUpdatedAt()),
                 extraMembers.stream()
                         .map(m -> new TaskMemberEntryResponse(m.getId().getUserId(), m.getId().getRole()))
-                        .toList()
+                        .toList(),
+                tags
         );
     }
 

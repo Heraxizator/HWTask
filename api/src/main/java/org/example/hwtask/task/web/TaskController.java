@@ -62,10 +62,12 @@ public class TaskController {
     public Page<TaskResponse> list(
             @AuthenticationPrincipal UserPrincipal user,
             @RequestParam UUID projectId,
+            @RequestParam(required = false) List<UUID> tagIds,
+            @RequestParam(required = false) String q,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
-        return taskService.list(user.getId(), projectId, pageable);
+        return taskService.list(user.getId(), projectId, pageable, tagIds, q);
     }
 
     @GetMapping("/{taskId}/subtasks")

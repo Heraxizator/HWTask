@@ -13,6 +13,10 @@ export interface ListTasksParams {
   page?: number;
   size?: number;
   sort?: string;
+  /** Поиск по названию и описанию */
+  q?: string;
+  /** Фильтр по любому из тегов */
+  tagIds?: string[];
 }
 
 export function listTasks(params: ListTasksParams): Promise<PageTaskResponse> {
@@ -21,6 +25,12 @@ export function listTasks(params: ListTasksParams): Promise<PageTaskResponse> {
   if (params.page !== undefined) sp.set('page', String(params.page));
   if (params.size !== undefined) sp.set('size', String(params.size));
   if (params.sort) sp.set('sort', params.sort);
+  if (params.q?.trim()) sp.set('q', params.q.trim());
+  if (params.tagIds?.length) {
+    for (const id of params.tagIds) {
+      sp.append('tagIds', id);
+    }
+  }
   return fetchJson<PageTaskResponse>(`${BASE}?${sp.toString()}`);
 }
 

@@ -91,7 +91,7 @@ class TaskIntegrationTest {
                         .with(authentication(demoAuth))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"projectId":"%s","title":"Hello","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[]}
+                                {"projectId":"%s","title":"Hello","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[],"tagIds":[]}
                                 """.formatted(projectId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("Hello"))
@@ -123,7 +123,7 @@ class TaskIntegrationTest {
                         .with(authentication(demoAuth))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"projectId":"%s","title":"","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[]}
+                                {"projectId":"%s","title":"","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[],"tagIds":[]}
                                 """.formatted(projectId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.title").exists());
@@ -135,7 +135,7 @@ class TaskIntegrationTest {
                         .with(authentication(demoAuth))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"projectId":"%s","title":"Original","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[]}
+                                {"projectId":"%s","title":"Original","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[],"tagIds":[]}
                                 """.formatted(projectId)))
                 .andExpect(status().isCreated())
                 .andReturn()

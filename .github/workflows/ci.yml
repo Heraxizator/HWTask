@@ -47,6 +47,6 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
 
-      - name: Install and lint & build UI
+      - name: Install, lint, test & build UI
         working-directory: ui
-        run: npm ci && npm run lint && npm run build
+        run: npm ci && npm run lint && npm test && npm run build

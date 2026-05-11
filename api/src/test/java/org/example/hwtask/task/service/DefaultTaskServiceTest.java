@@ -4,6 +4,8 @@ import org.example.hwtask.automation.service.AutomationRuleProcessor;
 import org.example.hwtask.collaboration.service.ActivityRecorder;
 import org.example.hwtask.identity.persistence.ProjectMemberRepository;
 import org.example.hwtask.identity.service.AccessControlService;
+import org.example.hwtask.notification.service.NotificationService;
+import org.example.hwtask.tag.service.TagService;
 import org.example.hwtask.task.dto.request.CreateTaskRequest;
 import org.example.hwtask.task.dto.request.UpdateTaskRequest;
 import org.example.hwtask.task.persistence.Task;
@@ -20,8 +22,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -53,6 +57,12 @@ class DefaultTaskServiceTest {
     @Mock
     AutomationRuleProcessor automationRuleProcessor;
 
+    @Mock
+    NotificationService notificationService;
+
+    @Mock
+    TagService tagService;
+
     DefaultTaskService service;
 
     @BeforeEach
@@ -63,9 +73,13 @@ class DefaultTaskServiceTest {
                 projectMemberRepository,
                 accessControlService,
                 activityRecorder,
-                automationRuleProcessor
+                automationRuleProcessor,
+                notificationService,
+                tagService
         );
         doNothing().when(accessControlService).assertProjectMember(any(), any());
+        when(tagService.tagsGroupedByTaskId(any())).thenReturn(Map.of());
+        when(taskMemberRepository.findByIdTaskId(any())).thenReturn(List.of());
     }
 
     @Test
@@ -85,7 +99,8 @@ class DefaultTaskServiceTest {
                 "Hello",
                 null,
                 null,
-                null
+                null,
+                List.of()
         ));
 
         ArgumentCaptor<Task> captor = ArgumentCaptor.forClass(Task.class);
@@ -108,14 +123,14 @@ class DefaultTaskServiceTest {
         UUID projectId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         Pageable incoming = PageRequest.of(0, 20, Sort.by("string"));
-        when(taskRepository.findByProjectId(any(), any(Pageable.class))).thenAnswer(inv -> {
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class))).thenAnswer(inv -> {
             Pageable safe = inv.getArgument(1);
             assertThat(safe.getSort().getOrderFor("createdAt")).isNotNull();
             assertThat(safe.getSort().getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.DESC);
             return new PageImpl<Task>(List.of(), safe, 0);
         });
 
-        service.list(userId, projectId, incoming);
+        service.list(userId, projectId, incoming, null, null);
     }
 
     @Test

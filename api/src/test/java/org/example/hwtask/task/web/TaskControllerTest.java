@@ -66,6 +66,7 @@ class TaskControllerTest {
                 TaskPriority.LOW,
                 t,
                 t,
+                List.of(),
                 List.of()
         );
     }
@@ -81,7 +82,7 @@ class TaskControllerTest {
                         .with(authentication(demoAuth()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"projectId":"%s","title":"Title","description":null,"status":"TODO","priority":"LOW","coAssigneeIds":[],"observerIds":[]}
+                                {"projectId":"%s","title":"Title","description":null,"status":"TODO","priority":"LOW","coAssigneeIds":[],"observerIds":[],"tagIds":[]}
                                 """.formatted(projectId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(id.toString()))
@@ -104,7 +105,7 @@ class TaskControllerTest {
         UUID id = UUID.randomUUID();
         UUID projectId = UUID.randomUUID();
         OffsetDateTime t = OffsetDateTime.ofInstant(java.time.Instant.parse("2025-01-01T00:00:00Z"), ZoneOffset.UTC);
-        when(taskService.list(any(), eq(projectId), any())).thenReturn(
+        when(taskService.list(any(), eq(projectId), any(), any(), any())).thenReturn(
                 new PageImpl<>(List.of(sampleTask(id, projectId, t)), PageRequest.of(0, 20), 1)
         );
 
@@ -128,7 +129,7 @@ class TaskControllerTest {
                         .with(authentication(demoAuth()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"projectId":"%s","title":"","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[]}
+                                {"projectId":"%s","title":"","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[],"tagIds":[]}
                                 """.formatted(projectId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.title").exists());
@@ -153,6 +154,7 @@ class TaskControllerTest {
                         TaskPriority.HIGH,
                         t,
                         t,
+                        List.of(),
                         List.of()
                 )
         );

@@ -3,6 +3,7 @@ package org.example.hwtask.reports.web;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.hwtask.reports.service.ReportsService;
+import org.example.hwtask.reports.dto.ProjectTimeSummaryResponse;
 import org.example.hwtask.reports.dto.TaskSummaryReportResponse;
 import org.example.hwtask.security.UserPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,5 +32,14 @@ public class ReportsController {
             @PathVariable UUID projectId
     ) {
         return reportsService.taskSummary(projectId, user.getId());
+    }
+
+    @GetMapping("/time-summary")
+    @Operation(summary = "Сводка учёта времени по проекту")
+    public ProjectTimeSummaryResponse timeSummary(
+            @AuthenticationPrincipal UserPrincipal user,
+            @PathVariable UUID projectId
+    ) {
+        return reportsService.projectTimeSummary(projectId, user.getId());
     }
 }

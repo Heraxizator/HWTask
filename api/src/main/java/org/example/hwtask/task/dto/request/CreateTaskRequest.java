@@ -35,7 +35,9 @@ public record CreateTaskRequest(
 
         TaskStatus status,
 
-        TaskPriority priority
+        TaskPriority priority,
+
+        List<UUID> tagIds
 ) {
     public CreateTaskRequest {
         if (coAssigneeIds == null) {
@@ -43,6 +45,9 @@ public record CreateTaskRequest(
         }
         if (observerIds == null) {
             observerIds = List.of();
+        }
+        if (tagIds == null) {
+            tagIds = List.of();
         }
     }
 }

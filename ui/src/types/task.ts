@@ -9,6 +9,11 @@ export interface TaskMemberEntryResponse {
   role: TaskMemberRole;
 }
 
+export interface TaskTagResponse {
+  id: string;
+  name: string;
+}
+
 export interface TaskResponse {
   id: string;
   projectId: string;
@@ -23,6 +28,7 @@ export interface TaskResponse {
   createdAt: string;
   updatedAt: string;
   extraMembers: TaskMemberEntryResponse[];
+  tags: TaskTagResponse[];
 }
 
 export interface CreateTaskRequest {
@@ -36,6 +42,7 @@ export interface CreateTaskRequest {
   description?: string | null;
   status?: TaskStatus;
   priority?: TaskPriority | null;
+  tagIds?: string[];
 }
 
 export interface UpdateTaskRequest {

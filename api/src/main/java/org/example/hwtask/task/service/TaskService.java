@@ -15,7 +15,7 @@ public interface TaskService {
 
     TaskResponse get(UUID currentUserId, UUID taskId);
 
-    Page<TaskResponse> list(UUID currentUserId, UUID projectId, Pageable pageable);
+    Page<TaskResponse> list(UUID currentUserId, UUID projectId, Pageable pageable, List<UUID> tagIds, String search);
 
     List<TaskResponse> listSubtasks(UUID currentUserId, UUID parentTaskId);
 

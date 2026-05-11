@@ -15,6 +15,8 @@ import org.example.hwtask.automation.dto.CreateReminderRequest;
 import org.example.hwtask.automation.dto.ReminderResponse;
 import org.example.hwtask.collaboration.dto.CommentResponse;
 import org.example.hwtask.collaboration.dto.CreateCommentRequest;
+import org.example.hwtask.notification.persistence.NotificationType;
+import org.example.hwtask.notification.service.NotificationService;
 import org.example.hwtask.identity.service.AccessControlService;
 import org.example.hwtask.security.AttachmentStorageProperties;
 import org.example.hwtask.task.persistence.Task;
@@ -46,6 +48,7 @@ public class CollaborationService {
     private final TaskReminderRepository taskReminderRepository;
     private final ActivityRecorder activityRecorder;
     private final AttachmentStorageProperties storageProperties;
+    private final NotificationService notificationService;
 
     public CollaborationService(
             TaskRepository taskRepository,
@@ -55,7 +58,8 @@ public class CollaborationService {
             TaskAttachmentRepository taskAttachmentRepository,
             TaskReminderRepository taskReminderRepository,
             ActivityRecorder activityRecorder,
-            AttachmentStorageProperties storageProperties
+            AttachmentStorageProperties storageProperties,
+            NotificationService notificationService
     ) {
         this.taskRepository = taskRepository;
         this.accessControlService = accessControlService;
@@ -65,6 +69,7 @@ public class CollaborationService {
         this.taskReminderRepository = taskReminderRepository;
         this.activityRecorder = activityRecorder;
         this.storageProperties = storageProperties;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -74,6 +79,8 @@ public class CollaborationService {
         TaskComment c = new TaskComment(taskId, currentUserId, request.body().trim());
         taskCommentRepository.save(c);
         activityRecorder.record(taskId, currentUserId, TaskActivityType.COMMENT_ADDED, "Комментарий добавлен");
+        notificationService.notifyTaskAudience(task, NotificationType.TASK_COMMENT, currentUserId,
+                "Комментарий к задаче", task.getTitle());
         return toCommentResponse(c);
     }
 

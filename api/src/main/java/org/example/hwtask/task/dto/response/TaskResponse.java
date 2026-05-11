@@ -24,6 +24,7 @@ public record TaskResponse(
         OffsetDateTime createdAt,
         @Schema(description = "UTC")
         OffsetDateTime updatedAt,
-        List<TaskMemberEntryResponse> extraMembers
+        List<TaskMemberEntryResponse> extraMembers,
+        List<TaskTagResponse> tags
 ) {
 }

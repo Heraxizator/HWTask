@@ -14,8 +14,14 @@ import org.example.hwtask.task.persistence.TaskMember;
 import org.example.hwtask.task.persistence.TaskMemberRepository;
 import org.example.hwtask.task.persistence.TaskMemberRole;
 import org.example.hwtask.task.persistence.TaskRepository;
+import org.example.hwtask.task.persistence.TaskSpecifications;
 import org.example.hwtask.task.persistence.TaskStatus;
 import org.example.hwtask.automation.service.AutomationRuleProcessor;
+import org.example.hwtask.notification.persistence.NotificationType;
+import org.example.hwtask.notification.service.NotificationService;
+import org.example.hwtask.tag.service.TagService;
+import org.example.hwtask.task.dto.response.TaskTagResponse;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +52,8 @@ class DefaultTaskService implements TaskService {
     private final AccessControlService accessControlService;
     private final ActivityRecorder activityRecorder;
     private final AutomationRuleProcessor automationRuleProcessor;
+    private final NotificationService notificationService;
+    private final TagService tagService;
 
     DefaultTaskService(
             TaskRepository taskRepository,
@@ -53,7 +61,9 @@ class DefaultTaskService implements TaskService {
             ProjectMemberRepository projectMemberRepository,
             AccessControlService accessControlService,
             ActivityRecorder activityRecorder,
-            AutomationRuleProcessor automationRuleProcessor
+            AutomationRuleProcessor automationRuleProcessor,
+            NotificationService notificationService,
+            TagService tagService
     ) {
         this.taskRepository = taskRepository;
         this.taskMemberRepository = taskMemberRepository;
@@ -61,6 +71,8 @@ class DefaultTaskService implements TaskService {
         this.accessControlService = accessControlService;
         this.activityRecorder = activityRecorder;
         this.automationRuleProcessor = automationRuleProcessor;
+        this.notificationService = notificationService;
+        this.tagService = tagService;
     }
 
     @Override
@@ -96,9 +108,15 @@ class DefaultTaskService implements TaskService {
         );
         Task saved = taskRepository.save(task);
         syncExtraMembers(saved.getId(), request.coAssigneeIds(), request.observerIds());
+        if (!request.tagIds().isEmpty()) {
+            tagService.setTaskTags(saved.getId(), projectId, request.tagIds(), currentUserId);
+        }
 
         activityRecorder.record(saved.getId(), currentUserId, TaskActivityType.CREATED,
                 "Задача создана: " + saved.getTitle());
+
+        notificationService.notifyTaskAudience(saved, NotificationType.TASK_CREATED, currentUserId,
+                "Новая задача", saved.getTitle());
 
         return map(saved);
     }
@@ -113,12 +131,25 @@ class DefaultTaskService implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TaskResponse> list(UUID currentUserId, UUID projectId, Pageable pageable) {
+    public Page<TaskResponse> list(UUID currentUserId, UUID projectId, Pageable pageable, List<UUID> tagIds, String search) {
         accessControlService.assertProjectMember(projectId, currentUserId);
         Pageable safe = sanitizePageable(pageable);
-        Page<Task> page = taskRepository.findByProjectId(projectId, safe);
+        Specification<Task> spec = Specification.where(TaskSpecifications.projectEquals(projectId));
+        Specification<Task> searchSpec = TaskSpecifications.titleOrDescriptionContains(search != null ? search : "");
+        if (searchSpec != null) {
+            spec = spec.and(searchSpec);
+        }
+        Specification<Task> tagSpec = TaskSpecifications.hasAnyTag(tagIds != null ? tagIds : List.of());
+        if (tagSpec != null) {
+            spec = spec.and(tagSpec);
+        }
+        Page<Task> page = taskRepository.findAll(spec, safe);
         Map<UUID, List<TaskMember>> extrasByTaskId = taskMembersByTaskId(idsOnPage(page));
-        return page.map(t -> TaskDtoMapper.toResponse(t, extrasByTaskId.getOrDefault(t.getId(), List.of())));
+        Map<UUID, List<TaskTagResponse>> tagsByTaskId = tagService.tagsGroupedByTaskId(idsOnPage(page));
+        return page.map(t -> TaskDtoMapper.toResponse(
+                t,
+                extrasByTaskId.getOrDefault(t.getId(), List.of()),
+                tagsByTaskId.getOrDefault(t.getId(), List.of())));
     }
 
     @Override
@@ -127,9 +158,14 @@ class DefaultTaskService implements TaskService {
         Task parent = taskRepository.findById(parentTaskId).orElseThrow(() -> new TaskNotFoundException(parentTaskId));
         accessControlService.assertProjectMember(parent.getProjectId(), currentUserId);
         List<Task> subtasks = taskRepository.findByParentTaskIdOrderByCreatedAtAsc(parentTaskId);
-        Map<UUID, List<TaskMember>> extrasByTaskId = taskMembersByTaskId(subtasks.stream().map(Task::getId).toList());
+        List<UUID> subIds = subtasks.stream().map(Task::getId).toList();
+        Map<UUID, List<TaskMember>> extrasByTaskId = taskMembersByTaskId(subIds);
+        Map<UUID, List<TaskTagResponse>> tagsByTaskId = tagService.tagsGroupedByTaskId(subIds);
         return subtasks.stream()
-                .map(t -> TaskDtoMapper.toResponse(t, extrasByTaskId.getOrDefault(t.getId(), List.of())))
+                .map(t -> TaskDtoMapper.toResponse(
+                        t,
+                        extrasByTaskId.getOrDefault(t.getId(), List.of()),
+                        tagsByTaskId.getOrDefault(t.getId(), List.of())))
                 .toList();
     }
 
@@ -166,6 +202,8 @@ class DefaultTaskService implements TaskService {
             activityRecorder.record(taskId, currentUserId, TaskActivityType.STATUS_CHANGED,
                     "Статус: " + oldStatus + " → " + task.getStatus());
             automationRuleProcessor.onStatusChanged(task, oldStatus, currentUserId);
+            notificationService.notifyTaskAudience(task, NotificationType.TASK_STATUS_CHANGED, currentUserId,
+                    "Изменён статус", task.getTitle() + ": " + oldStatus + " → " + task.getStatus());
         }
 
         return map(task);
@@ -179,12 +217,16 @@ class DefaultTaskService implements TaskService {
         if (taskRepository.countByParentTaskId(taskId) > 0) {
             throw new IllegalArgumentException("Сначала удалите подзадачи");
         }
+        notificationService.notifyTaskAudience(task, NotificationType.TASK_DELETED, currentUserId,
+                "Задача удалена", task.getTitle());
         taskRepository.delete(task);
     }
 
     private TaskResponse map(Task task) {
         List<TaskMember> extras = taskMemberRepository.findByIdTaskId(task.getId());
-        return TaskDtoMapper.toResponse(task, extras);
+        List<TaskTagResponse> tags = tagService.tagsGroupedByTaskId(List.of(task.getId()))
+                .getOrDefault(task.getId(), List.of());
+        return TaskDtoMapper.toResponse(task, extras, tags);
     }
 
     private static List<UUID> idsOnPage(Page<Task> page) {

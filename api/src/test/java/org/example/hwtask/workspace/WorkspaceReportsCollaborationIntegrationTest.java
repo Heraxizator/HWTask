@@ -93,7 +93,7 @@ class WorkspaceReportsCollaborationIntegrationTest {
                         .with(authentication(demoAuth))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"projectId":"%s","title":"Интеграция","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[]}
+                                {"projectId":"%s","title":"Интеграция","description":null,"status":"TODO","priority":null,"coAssigneeIds":[],"observerIds":[],"tagIds":[]}
                                 """.formatted(projectId)))
                 .andExpect(status().isCreated())
                 .andReturn()

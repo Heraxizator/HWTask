@@ -44,5 +44,6 @@ class TaskDtoMapperTest {
         assertThat(response.priority()).isEqualTo(TaskPriority.HIGH);
         assertThat(response.createdAt().toInstant()).isEqualTo(created);
         assertThat(response.updatedAt().toInstant()).isEqualTo(updated);
+        assertThat(response.tags()).isEmpty();
     }
 }
