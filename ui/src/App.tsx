@@ -6,6 +6,7 @@ import { logout } from './api/auth';
 import { LoginPage } from './features/auth/LoginPage';
 import { TasksPage } from './features/tasks/TasksPage';
 import { ApiError } from './api/http';
+import { Loader } from './portal-ui';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,7 +38,19 @@ function AppGate() {
     }
   }, [meQuery]);
 
-  if (meQuery.isLoading) return null;
+  if (meQuery.isLoading) {
+    return (
+      <div className="app-shell">
+        <div className="state-block state-block--rich" aria-label="Загрузка профиля">
+          <div className="state-block__icon" aria-hidden>
+            <Loader size={22} />
+          </div>
+          <div className="state-block__title">Загрузка</div>
+          <p className="state-block__lead muted">Проверяем сессию и загружаем профиль…</p>
+        </div>
+      </div>
+    );
+  }
   if (meQuery.isError) {
     const err = meQuery.error;
     if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
