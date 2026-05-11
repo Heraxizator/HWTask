@@ -392,72 +392,78 @@ export function MembersModal({
           <p className="muted">Выберите проект.</p>
         ) : (
           <>
-            {listQ.isLoading ? (
-              <p className="muted">Загрузка…</p>
-            ) : listQ.error ? (
-              <p className="alert" role="alert">
-                {listQ.error instanceof Error ? listQ.error.message : 'Ошибка'}
-              </p>
-            ) : (
-              <ul style={{ margin: '0 0 1rem', paddingLeft: '1.1rem' }}>
-                {(listQ.data ?? []).map((m) => (
-                  <li key={m.userId} className="muted" style={{ marginBottom: '0.35rem' }}>
-                    <strong>{m.displayName || m.email}</strong> ({m.role})
-                    <div style={{ fontSize: '0.82rem' }}>{m.userId}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <h3 className="subsection-head">Добавить участника</h3>
-            {formErr && (
-              <div className="alert" role="alert">
-                {formErr}
+            <div className="modal-form__scroll" style={{ paddingBottom: '0.5rem' }}>
+              {listQ.isLoading ? (
+                <p className="muted">Загрузка…</p>
+              ) : listQ.error ? (
+                <p className="alert" role="alert">
+                  {listQ.error instanceof Error ? listQ.error.message : 'Ошибка'}
+                </p>
+              ) : (
+                <ul style={{ margin: '0 0 1rem', paddingLeft: '1.1rem' }}>
+                  {(listQ.data ?? []).map((m) => (
+                    <li key={m.userId} className="muted" style={{ marginBottom: '0.35rem' }}>
+                      <strong>{m.displayName || m.email}</strong> ({m.role})
+                      <div style={{ fontSize: '0.82rem' }}>{m.userId}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <h3 className="subsection-head">Добавить участника</h3>
+              {formErr && (
+                <div className="alert" role="alert">
+                  {formErr}
+                </div>
+              )}
+              <div className="field">
+                <label htmlFor="member-user-id">UUID пользователя</label>
+                <input
+                  id="member-user-id"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="00000000-0000-0000-0000-000000000000"
+                  autoComplete="off"
+                />
               </div>
-            )}
-            <div className="field">
-              <label htmlFor="member-user-id">UUID пользователя</label>
-              <input
-                id="member-user-id"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="00000000-0000-0000-0000-000000000000"
-                autoComplete="off"
-              />
+              <div className="field">
+                <label htmlFor="member-role">Роль</label>
+                <select
+                  id="member-role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as ProjectRole)}
+                >
+                  <option value="MEMBER">Участник</option>
+                  <option value="MANAGER">Менеджер</option>
+                </select>
+              </div>
             </div>
-            <div className="field">
-              <label htmlFor="member-role">Роль</label>
-              <select
-                id="member-role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as ProjectRole)}
-              >
-                <option value="MEMBER">Участник</option>
-                <option value="MANAGER">Менеджер</option>
-              </select>
-            </div>
-            <Button
-              type="button"
-              variant={ButtonVariants.FILLED}
-              color={ButtonColors.PRIMARY}
-              size={ButtonSizes.MEDIUM}
-              loading={addMut.isPending}
-              disabled={!userId.trim()}
-              onClick={() => addMut.mutate()}
-            >
-              Добавить
-            </Button>
           </>
         )}
-        <div className="modal-actions" style={{ marginTop: '1rem' }}>
-          <Button
-            type="button"
-            variant={ButtonVariants.GHOST}
-            color={ButtonColors.NEUTRAL}
-            size={ButtonSizes.MEDIUM}
-            onClick={onClose}
-          >
-            Закрыть
-          </Button>
+        <div className="modal-form__footer">
+          <div className="modal-actions">
+            {projectId ? (
+              <Button
+                type="button"
+                variant={ButtonVariants.FILLED}
+                color={ButtonColors.PRIMARY}
+                size={ButtonSizes.MEDIUM}
+                loading={addMut.isPending}
+                disabled={!userId.trim()}
+                onClick={() => addMut.mutate()}
+              >
+                Добавить
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant={ButtonVariants.GHOST}
+              color={ButtonColors.NEUTRAL}
+              size={ButtonSizes.MEDIUM}
+              onClick={onClose}
+            >
+              Закрыть
+            </Button>
+          </div>
         </div>
       </div>
     </div>

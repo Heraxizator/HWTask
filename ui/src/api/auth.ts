@@ -26,3 +26,7 @@ export async function register(
 export async function logout(): Promise<void> {
   await fetchJson<void>('/api/v1/auth/logout', { method: 'POST' });
 }
+
+export async function refreshSession(): Promise<void> {
+  await fetchJson<void>('/api/v1/auth/refresh', { method: 'POST' });
+}

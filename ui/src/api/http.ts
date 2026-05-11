@@ -1,4 +1,5 @@
 import type { ProblemDetailBody } from '../types/task';
+import { refreshSession } from './auth';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -69,60 +70,78 @@ function authHeaders(init?: HeadersInit): Headers {
   return headers;
 }
 
+async function retryOnceAfterRefresh<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      await refreshSession();
+      return await fn();
+    }
+    throw e;
+  }
+}
+
 export async function fetchJson<T>(
   input: RequestInfo,
   init?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(input, {
-    ...init,
-    credentials: 'include',
-    headers: authHeaders(init?.headers),
+  return retryOnceAfterRefresh(async () => {
+    const res = await fetch(input, {
+      ...init,
+      credentials: 'include',
+      headers: authHeaders(init?.headers),
+    });
+    return parseJsonResponse<T>(res);
   });
-  return parseJsonResponse<T>(res);
 }
 
 /** DELETE / 204 без тела */
 export async function fetchVoid(input: RequestInfo, init?: RequestInit): Promise<void> {
-  const res = await fetch(input, {
-    ...init,
-    credentials: 'include',
-    headers: authHeaders(init?.headers),
+  return retryOnceAfterRefresh(async () => {
+    const res = await fetch(input, {
+      ...init,
+      credentials: 'include',
+      headers: authHeaders(init?.headers),
+    });
+    if (res.ok && res.status === 204) return;
+    await parseJsonResponse<unknown>(res);
   });
-  if (res.ok && res.status === 204) return;
-  await parseJsonResponse<unknown>(res);
 }
 
 /** Авторизованный fetch бинарного ответа (скачивание вложений). */
 export async function fetchBlob(input: RequestInfo, init?: RequestInit): Promise<Blob> {
-  const res = await fetch(input, {
-    ...init,
-    credentials: 'include',
-    headers: authHeaders(init?.headers),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    let body: unknown;
-    if (text) {
-      try {
-        body = JSON.parse(text) as unknown;
-      } catch {
-        body = undefined;
+  return retryOnceAfterRefresh(async () => {
+    const res = await fetch(input, {
+      ...init,
+      credentials: 'include',
+      headers: authHeaders(init?.headers),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      let body: unknown;
+      if (text) {
+        try {
+          body = JSON.parse(text) as unknown;
+        } catch {
+          body = undefined;
+        }
       }
+      const msg =
+        (body !== undefined &&
+          typeof body === 'object' &&
+          readProblemMessage(body)) ||
+        text?.trim() ||
+        res.statusText?.trim() ||
+        `HTTP ${res.status}`;
+      const problem =
+        body && typeof body === 'object' && 'status' in (body as object)
+          ? (body as ProblemDetailBody)
+          : undefined;
+      throw new ApiError(msg, res.status, problem);
     }
-    const msg =
-      (body !== undefined &&
-        typeof body === 'object' &&
-        readProblemMessage(body)) ||
-      text?.trim() ||
-      res.statusText?.trim() ||
-      `HTTP ${res.status}`;
-    const problem =
-      body && typeof body === 'object' && 'status' in (body as object)
-        ? (body as ProblemDetailBody)
-        : undefined;
-    throw new ApiError(msg, res.status, problem);
-  }
-  return res.blob();
+    return res.blob();
+  });
 }
 
 /** POST multipart/form-data (поле Content-Type задаёт браузер). */
@@ -131,6 +150,8 @@ export async function fetchJsonMultipart<T>(
   formData: FormData,
 ): Promise<T> {
   const headers = authHeaders();
-  const res = await fetch(input, { method: 'POST', credentials: 'include', headers, body: formData });
-  return parseJsonResponse<T>(res);
+  return retryOnceAfterRefresh(async () => {
+    const res = await fetch(input, { method: 'POST', credentials: 'include', headers, body: formData });
+    return parseJsonResponse<T>(res);
+  });
 }
