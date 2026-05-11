@@ -3,7 +3,6 @@ package org.example.hwtask.identity.service;
 import org.example.hwtask.identity.persistence.RefreshToken;
 import org.example.hwtask.identity.persistence.RefreshTokenRepository;
 import org.example.hwtask.identity.persistence.User;
-import org.example.hwtask.identity.persistence.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,11 +20,9 @@ public class RefreshTokenService {
     private static final HexFormat HEX = HexFormat.of();
 
     private final RefreshTokenRepository refreshTokenRepository;
-    private final UserRepository userRepository;
 
-    public RefreshTokenService(RefreshTokenRepository refreshTokenRepository, UserRepository userRepository) {
+    public RefreshTokenService(RefreshTokenRepository refreshTokenRepository) {
         this.refreshTokenRepository = refreshTokenRepository;
-        this.userRepository = userRepository;
     }
 
     public record IssuedRefreshToken(String rawToken, Instant expiresAt) {

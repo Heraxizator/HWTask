@@ -19,10 +19,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final org.example.hwtask.identity.service.AuthCookieProperties cookieProperties;
+    private final SecurityProperties securityProperties;
 
-    public JwtAuthenticationFilter(JwtService jwtService, org.example.hwtask.identity.service.AuthCookieProperties cookieProperties) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            org.example.hwtask.identity.service.AuthCookieProperties cookieProperties,
+            SecurityProperties securityProperties
+    ) {
         this.jwtService = jwtService;
         this.cookieProperties = cookieProperties;
+        this.securityProperties = securityProperties;
     }
 
     @Override
@@ -32,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String token = readCookie(request, cookieProperties.accessName());
-        if (token == null || token.isBlank()) {
+        if ((token == null || token.isBlank()) && securityProperties.allowBearerHeader()) {
             String header = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (header != null && header.startsWith("Bearer ")) {
                 token = header.substring(7).trim();

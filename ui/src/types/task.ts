@@ -90,8 +90,6 @@ export interface ProjectResponse {
 }
 
 export interface AuthResponse {
-  accessToken: string;
-  tokenType: string;
   user: {
     id: string;
     email: string;

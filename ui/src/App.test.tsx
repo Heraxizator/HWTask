@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import App from './App';
+import { ApiError } from './api/http';
 
 vi.mock('./api/me', () => ({
   getMe: vi.fn(),
@@ -19,7 +20,7 @@ import { getMe } from './api/me';
 
 describe('App auth gate', () => {
   it('shows LoginPage when /me is unauthorized', async () => {
-    vi.mocked(getMe).mockRejectedValueOnce(new Error('401'));
+    vi.mocked(getMe).mockRejectedValueOnce(new ApiError('Unauthorized', 401));
     render(<App />);
     expect(await screen.findByText('LOGIN_PAGE')).toBeInTheDocument();
   });

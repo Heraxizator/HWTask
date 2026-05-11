@@ -7,7 +7,8 @@ import org.example.hwtask.identity.service.AuthService;
 import org.example.hwtask.identity.service.AuthCookieProperties;
 import org.example.hwtask.identity.service.RefreshTokenService;
 import org.example.hwtask.identity.service.UnauthorizedException;
-import org.example.hwtask.identity.web.dto.AuthResponse;
+import org.example.hwtask.identity.web.dto.AuthUserResponse;
+import org.example.hwtask.identity.web.dto.CsrfTokenResponse;
 import org.example.hwtask.identity.web.dto.LoginRequest;
 import org.example.hwtask.identity.web.dto.RegisterRequest;
 import org.springframework.http.HttpHeaders;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.web.csrf.CsrfToken;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -42,22 +44,22 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Регистрация")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthUserResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthService.AuthSession session = authService.registerSession(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, accessCookie(session.accessToken()).toString())
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(session.refreshToken()).toString())
-                .body(new AuthResponse(session.accessToken(), "Bearer", session.user()));
+                .body(new AuthUserResponse(session.user()));
     }
 
     @PostMapping("/login")
     @Operation(summary = "Вход")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<AuthUserResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthService.AuthSession session = authService.loginSession(request);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie(session.accessToken()).toString())
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(session.refreshToken()).toString())
-                .body(new AuthResponse(session.accessToken(), "Bearer", session.user()));
+                .body(new AuthUserResponse(session.user()));
     }
 
     @PostMapping("/refresh")
@@ -88,8 +90,9 @@ public class AuthController {
 
     @GetMapping("/csrf")
     @Operation(summary = "Инициализация CSRF cookie для SPA")
-    public ResponseEntity<Void> csrf() {
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<CsrfTokenResponse> csrf(CsrfToken token) {
+        // Важно: обращаемся к токену, чтобы гарантировать его материализацию репозиторием.
+        return ResponseEntity.ok(new CsrfTokenResponse(token.getHeaderName(), token.getParameterName(), token.getToken()));
     }
 
     private ResponseCookie accessCookie(String value) {

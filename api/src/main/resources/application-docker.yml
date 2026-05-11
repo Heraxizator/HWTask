@@ -12,6 +12,8 @@ spring:
 
 # Секреты только из окружения (см. compose / .env). Без JWT_SECRET приложение не стартует.
 hwtask:
+  security:
+    allow-bearer-header: false
   jwt:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}

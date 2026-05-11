@@ -10,18 +10,14 @@ vi.mock('../../api/auth', () => ({
   logout: vi.fn(() => Promise.resolve()),
   // /api/v1/auth/csrf warmup
   // (fetchJson is mocked only indirectly, so here we just keep the call sites happy)
-  // login/register mocks return accessToken for backward compatibility (ignored by UI).
+  // login/register mocks return user only (cookie-session mode).
   login: vi.fn(() =>
     Promise.resolve({
-      accessToken: 'tok',
-      tokenType: 'Bearer',
       user: { id: '1', email: 'demo@hwtask.local', displayName: 'Demo' },
     }),
   ),
   register: vi.fn(() =>
     Promise.resolve({
-      accessToken: 'tok2',
-      tokenType: 'Bearer',
       user: { id: '2', email: 'a@b.co', displayName: 'A' },
     }),
   ),
