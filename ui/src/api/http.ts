@@ -89,3 +89,45 @@ export async function fetchVoid(input: RequestInfo, init?: RequestInit): Promise
   if (res.ok && res.status === 204) return;
   await parseJsonResponse<unknown>(res);
 }
+
+/** Авторизованный fetch бинарного ответа (скачивание вложений). */
+export async function fetchBlob(input: RequestInfo, init?: RequestInit): Promise<Blob> {
+  const res = await fetch(input, {
+    ...init,
+    headers: authHeaders(init?.headers),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let body: unknown;
+    if (text) {
+      try {
+        body = JSON.parse(text) as unknown;
+      } catch {
+        body = undefined;
+      }
+    }
+    const msg =
+      (body !== undefined &&
+        typeof body === 'object' &&
+        readProblemMessage(body)) ||
+      text?.trim() ||
+      res.statusText?.trim() ||
+      `HTTP ${res.status}`;
+    const problem =
+      body && typeof body === 'object' && 'status' in (body as object)
+        ? (body as ProblemDetailBody)
+        : undefined;
+    throw new ApiError(msg, res.status, problem);
+  }
+  return res.blob();
+}
+
+/** POST multipart/form-data (поле Content-Type задаёт браузер). */
+export async function fetchJsonMultipart<T>(
+  input: RequestInfo,
+  formData: FormData,
+): Promise<T> {
+  const headers = authHeaders();
+  const res = await fetch(input, { method: 'POST', headers, body: formData });
+  return parseJsonResponse<T>(res);
+}

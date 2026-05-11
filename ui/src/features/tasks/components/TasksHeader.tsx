@@ -1,19 +1,28 @@
 import {
   ArchiveRestore,
   Bell,
+  KanbanSquare,
   LogOut,
   Plus,
 } from 'lucide-react';
 
 import type { NotificationResponse } from '../../../api/notifications';
+import {
+  Button,
+  ButtonColors,
+  ButtonSizes,
+  ButtonVariants,
+} from '../../../portal-ui';
 import { formatDt } from '../taskDisplay';
 
 export interface ProjectOption {
   label: string;
   projectId: string;
+  organizationId: string;
 }
 
 export function TasksHeader({
+  currentUserSummary,
   projectOptions,
   projectId,
   onProjectChange,
@@ -29,6 +38,7 @@ export function TasksHeader({
   onOpenTrash,
   onLogout,
 }: {
+  currentUserSummary?: string | null;
   projectOptions: ProjectOption[];
   projectId: string | null;
   onProjectChange: (projectId: string) => void;
@@ -46,14 +56,22 @@ export function TasksHeader({
 }) {
   return (
     <header className="app-header">
-      <div>
-        <h1 className="app-title">HWTask</h1>
-        <p className="app-sub">Проекты, роли и лента как в привычном портале</p>
+      <div className="app-header__brand">
+        <span className="app-header__mark" aria-hidden>
+          <KanbanSquare size={22} strokeWidth={2} />
+        </span>
+        <div>
+          <h1 className="app-title">HWTask</h1>
+          <p className="app-sub">Проекты, роли и лента как в привычном портале</p>
+        </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-        <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          Проект
+      <div className="app-header__actions">
+        <label className="app-header__field">
+          <span className="muted" style={{ whiteSpace: 'nowrap' }}>
+            Проект
+          </span>
           <select
+            className="portal-field__input portal-field__input--sm portal-field__select select-input"
             value={projectId ?? ''}
             disabled={!projectOptions.length}
             onChange={(e) => onProjectChange(e.target.value)}
@@ -66,94 +84,87 @@ export function TasksHeader({
             ))}
           </select>
         </label>
-        <button type="button" className="btn btn-primary" onClick={onOpenCreate} disabled={!projectId}>
-          <Plus size={18} strokeWidth={2} style={{ verticalAlign: 'middle', marginRight: '0.35rem' }} aria-hidden />
+        <Button
+          type="button"
+          variant={ButtonVariants.FILLED}
+          color={ButtonColors.PRIMARY}
+          size={ButtonSizes.MEDIUM}
+          disabled={!projectId}
+          onClick={onOpenCreate}
+          className="btn-with-icon"
+        >
+          <Plus size={18} strokeWidth={2} aria-hidden />
           Новая задача
-        </button>
-        <div style={{ position: 'relative' }}>
-          <button
+        </Button>
+        <div className="app-header__dropdown-wrap">
+          <Button
             type="button"
-            className="btn btn-ghost"
+            variant={ButtonVariants.GHOST}
+            color={ButtonColors.NEUTRAL}
+            size={ButtonSizes.MEDIUM}
             aria-expanded={notifOpen}
             aria-haspopup="true"
             onClick={onToggleNotifs}
             disabled={!projectId}
+            className="btn-with-icon"
           >
-            <Bell size={18} style={{ marginRight: '0.35rem' }} aria-hidden />
+            <Bell size={18} aria-hidden />
             Уведомления
             {unreadCount > 0 && (
-              <span className="badge badge-progress" style={{ marginLeft: '0.35rem', fontSize: '0.75rem' }}>
+              <span className="badge badge-counter" aria-live="polite">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
-          </button>
+          </Button>
           {notifOpen && (
-            <div
-              className="panel"
-              role="menu"
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: '100%',
-                marginTop: '0.5rem',
-                zIndex: 40,
-                minWidth: 320,
-                maxWidth: 420,
-                maxHeight: 360,
-                overflow: 'auto',
-                padding: '0.75rem',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', gap: '0.5rem' }}>
-                <strong style={{ fontSize: '0.9rem' }}>Лента</strong>
-                <button
+            <div className="notifications-dropdown" role="menu">
+              <div className="notifications-dropdown__head">
+                <span className="notifications-dropdown__title">Лента</span>
+                <Button
                   type="button"
-                  className="btn btn-ghost"
-                  style={{ fontSize: '0.85rem', padding: '0.25rem 0.5rem' }}
+                  variant={ButtonVariants.GHOST}
+                  color={ButtonColors.NEUTRAL}
+                  size={ButtonSizes.SMALL}
                   disabled={markAllPending}
                   onClick={onMarkAllRead}
                 >
                   Прочитать всё
-                </button>
+                </Button>
               </div>
               {notificationsLoading ? (
-                <p className="muted" style={{ margin: 0 }}>Загрузка…</p>
+                <p className="muted" style={{ margin: '0.5rem 0' }}>
+                  Загрузка…
+                </p>
               ) : notificationItems.length === 0 ? (
-                <p className="muted" style={{ margin: 0 }}>Нет уведомлений</p>
+                <p className="muted" style={{ margin: '0.75rem 0', textAlign: 'center', fontSize: '0.9rem' }}>
+                  Нет уведомлений
+                </p>
               ) : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                <ul>
                   {notificationItems.map((n) => (
                     <li
                       key={n.id}
-                      style={{
-                        padding: '0.5rem 0',
-                        borderBottom: '1px solid var(--color-border)',
-                        opacity: n.read ? 0.75 : 1,
-                      }}
+                      className={
+                        'notifications-dropdown__item' +
+                        (n.read ? ' notifications-dropdown__item--read' : '')
+                      }
                     >
-                      <button
+                      <Button
                         type="button"
-                        className="btn btn-ghost"
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: 0,
-                          height: 'auto',
-                          whiteSpace: 'normal',
-                        }}
+                        variant={ButtonVariants.GHOST}
+                        color={ButtonColors.NEUTRAL}
+                        size={ButtonSizes.SMALL}
+                        className="notifications-dropdown__btn"
                         onClick={() => onNotificationActivate(n)}
                       >
-                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{n.title}</div>
+                        <div className="notifications-dropdown__item-title">{n.title}</div>
                         {n.body && (
-                          <div className="muted" style={{ fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                          <div className="muted" style={{ fontSize: '0.85rem', marginTop: '0.2rem', lineHeight: 1.4 }}>
                             {n.body}
                           </div>
                         )}
-                        <div className="muted" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                          {formatDt(n.createdAt)}
-                        </div>
-                      </button>
+                        <div className="notifications-dropdown__item-meta">{formatDt(n.createdAt)}</div>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -161,20 +172,35 @@ export function TasksHeader({
             </div>
           )}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost"
+          variant={ButtonVariants.GHOST}
+          color={ButtonColors.NEUTRAL}
+          size={ButtonSizes.MEDIUM}
+          className="btn-with-icon"
           onClick={onOpenTrash}
           disabled={!projectId}
           aria-label="Корзина удалённых задач"
         >
-          <ArchiveRestore size={18} style={{ marginRight: '0.35rem' }} aria-hidden />
+          <ArchiveRestore size={18} aria-hidden />
           Корзина
-        </button>
-        <button type="button" className="btn btn-ghost" onClick={onLogout}>
-          <LogOut size={18} style={{ marginRight: '0.35rem' }} aria-hidden />
+        </Button>
+        {currentUserSummary ? (
+          <span className="muted" style={{ fontSize: '0.82rem', maxWidth: '200px', lineHeight: 1.35 }} title={currentUserSummary}>
+            {currentUserSummary}
+          </span>
+        ) : null}
+        <Button
+          type="button"
+          variant={ButtonVariants.GHOST}
+          color={ButtonColors.NEUTRAL}
+          size={ButtonSizes.MEDIUM}
+          className="btn-with-icon"
+          onClick={onLogout}
+        >
+          <LogOut size={18} aria-hidden />
           Выход
-        </button>
+        </Button>
       </div>
     </header>
   );

@@ -113,3 +113,71 @@ export interface ActivityEntryResponse {
   summary: string;
   createdAt: string;
 }
+
+export interface UserPublicResponse {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
+export type ProjectRole = 'MANAGER' | 'MEMBER';
+
+export interface ProjectMemberResponse {
+  userId: string;
+  email: string;
+  displayName: string;
+  role: ProjectRole;
+}
+
+export interface TaskSummaryReportResponse {
+  total: number;
+  todo: number;
+  inProgress: number;
+  done: number;
+  overdue: number;
+}
+
+export interface UserTimeShareResponse {
+  userId: string;
+  seconds: number;
+}
+
+export interface ProjectTimeSummaryResponse {
+  totalSeconds: number;
+  byUser: UserTimeShareResponse[];
+}
+
+export type RuleTriggerType = 'ON_STATUS_CHANGE' | 'ON_TASK_OVERDUE';
+export type RuleActionType = 'NOTIFY_ASSIGNEE' | 'ADD_ACTIVITY_NOTE';
+
+export interface AutomationRuleResponse {
+  id: string;
+  projectId: string;
+  triggerType: RuleTriggerType;
+  actionType: RuleActionType;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface CreateAutomationRuleRequest {
+  triggerType: RuleTriggerType;
+  actionType: RuleActionType;
+  enabled: boolean;
+}
+
+export interface AttachmentResponse {
+  id: string;
+  uploadedBy: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface ReminderResponse {
+  id: string;
+  taskId: string;
+  userId: string;
+  remindAt: string;
+  firedAt: string | null;
+}

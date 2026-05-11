@@ -1,11 +1,20 @@
 import { Clock, Trash2 } from 'lucide-react';
 
 import type { ChecklistItemResponse } from '../../../api/checklist';
+import {
+  Button,
+  ButtonColors,
+  ButtonSizes,
+  ButtonVariants,
+} from '../../../portal-ui';
 import type { TagResponse } from '../../../api/tags';
 import type { TimeEntryResponse } from '../../../api/time';
 import type {
   ActivityEntryResponse,
+  AttachmentResponse,
   CommentResponse,
+  ReminderResponse,
+  TaskResponse,
   TaskTagResponse,
 } from '../../../types/task';
 import { formatDt, formatDurationSeconds } from '../taskDisplay';
@@ -34,6 +43,21 @@ export function TaskDetailPanel({
   deleteCheckPending,
   onToggleChecklistItem,
   onDeleteChecklistItem,
+  subtasksLoading,
+  subtasks,
+  onOpenSubtask,
+  onAddSubtask,
+  attachmentsLoading,
+  attachments,
+  uploadAttachmentPending,
+  onUploadAttachmentFiles,
+  onDownloadAttachment,
+  remindersLoading,
+  reminders,
+  reminderLocal,
+  onReminderLocalChange,
+  onAddReminder,
+  reminderPending,
   commentsLoading,
   comments,
   commentText,
@@ -70,6 +94,21 @@ export function TaskDetailPanel({
   deleteCheckPending: boolean;
   onToggleChecklistItem: (id: string, done: boolean) => void;
   onDeleteChecklistItem: (id: string) => void;
+  subtasksLoading: boolean;
+  subtasks: TaskResponse[];
+  onOpenSubtask: (taskId: string) => void;
+  onAddSubtask: () => void;
+  attachmentsLoading: boolean;
+  attachments: AttachmentResponse[];
+  uploadAttachmentPending: boolean;
+  onUploadAttachmentFiles: (files: FileList | null) => void;
+  onDownloadAttachment: (attachmentId: string, fileName: string) => void;
+  remindersLoading: boolean;
+  reminders: ReminderResponse[];
+  reminderLocal: string;
+  onReminderLocalChange: (v: string) => void;
+  onAddReminder: () => void;
+  reminderPending: boolean;
   commentsLoading: boolean;
   comments: CommentResponse[];
   commentText: string;
@@ -84,41 +123,45 @@ export function TaskDetailPanel({
   onUnmute: () => void;
 }) {
   return (
-    <section className="panel" style={{ marginTop: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-        <h2 style={{ marginTop: 0 }}>Карточка задачи</h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <button type="button" className="btn btn-ghost" disabled={mutePending} onClick={onMute}>
-            Не уведомлять об этой задаче
-          </button>
-          <button type="button" className="btn btn-ghost" disabled={unmutePending} onClick={onUnmute}>
+    <section className="panel detail-panel">
+      <div className="detail-panel__head">
+        <h2 className="detail-panel__title">Карточка задачи</h2>
+        <div className="detail-panel__actions">
+          <Button
+            type="button"
+            variant={ButtonVariants.SOFT}
+            color={ButtonColors.PRIMARY}
+            size={ButtonSizes.MEDIUM}
+            disabled={mutePending}
+            onClick={onMute}
+          >
+            Не уведомлять
+          </Button>
+          <Button
+            type="button"
+            variant={ButtonVariants.SOFT}
+            color={ButtonColors.PRIMARY}
+            size={ButtonSizes.MEDIUM}
+            disabled={unmutePending}
+            onClick={onUnmute}
+          >
             Включить уведомления
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div style={{ marginBottom: '1.25rem' }}>
-        <h3 className="muted" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-          Теги
-        </h3>
+      <div className="detail-section-block">
+        <h3 className="subsection-head">Теги</h3>
         {tagsLoading || detailLoading ? (
           <p className="muted">Загрузка…</p>
         ) : projectTags.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>В проекте нет тегов — создайте в форме задачи.</p>
+          <p className="muted" style={{ margin: 0 }}>
+            В проекте нет тегов — добавьте их в форме создания или редактирования задачи.
+          </p>
         ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div className="tag-assign-row">
             {projectTags.map((tag) => (
-              <label
-                key={tag.id}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
+              <label key={tag.id} className="tag-assign-pill">
                 <input
                   type="checkbox"
                   checked={detailTags.some((t) => t.id === tag.id)}
@@ -132,61 +175,54 @@ export function TaskDetailPanel({
         )}
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gap: '1.5rem',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div>
-          <h3 className="muted" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-            Учёт времени
-          </h3>
+      <div className="detail-grid-2">
+        <div className="detail-well">
+          <h3 className="subsection-head">Учёт времени</h3>
           {timeLoading ? (
             <p className="muted">Загрузка…</p>
           ) : (
             <>
               {activeTimerEntry && (
-                <p style={{ marginTop: 0, fontSize: '0.9rem' }}>
-                  <Clock size={14} style={{ verticalAlign: 'middle', marginRight: '0.25rem' }} aria-hidden />
-                  Идёт учёт с {formatDt(activeTimerEntry.startedAt)}
-                </p>
+                <div className="time-active-banner">
+                  <Clock size={15} strokeWidth={2} aria-hidden />
+                  <span>
+                    Идёт учёт с <strong>{formatDt(activeTimerEntry.startedAt)}</strong>
+                  </span>
+                </div>
               )}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <button
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                <Button
                   type="button"
-                  className="btn btn-primary"
-                  disabled={startTimePending || !!activeTimerEntry}
+                  variant={ButtonVariants.FILLED}
+                  color={ButtonColors.PRIMARY}
+                  size={ButtonSizes.SMALL}
+                  loading={startTimePending}
+                  disabled={!!activeTimerEntry}
                   onClick={onStartTime}
                 >
                   Старт
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-ghost"
-                  disabled={stopTimePending || !activeTimerEntry}
+                  variant={ButtonVariants.GHOST}
+                  color={ButtonColors.NEUTRAL}
+                  size={ButtonSizes.SMALL}
+                  loading={stopTimePending}
+                  disabled={!activeTimerEntry}
                   onClick={onStopTime}
                 >
                   Стоп
-                </button>
+                </Button>
               </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 200, overflow: 'auto' }}>
+              <ul className="time-entry-list">
                 {timeEntries.length === 0 ? (
-                  <li className="muted" style={{ fontSize: '0.9rem' }}>Записей пока нет</li>
+                  <li className="muted" style={{ fontSize: '0.9rem' }}>
+                    Записей пока нет
+                  </li>
                 ) : (
                   timeEntries.map((te) => (
-                    <li
-                      key={te.id}
-                      style={{
-                        fontSize: '0.85rem',
-                        marginBottom: '0.4rem',
-                        paddingBottom: '0.4rem',
-                        borderBottom: '1px solid var(--color-border)',
-                      }}
-                    >
-                      <span className="muted">{formatDt(te.startedAt)}</span>
+                    <li key={te.id} className="time-entry-row muted">
+                      <span>{formatDt(te.startedAt)}</span>
                       {' — '}
                       {te.endedAt ? (
                         <>
@@ -194,7 +230,9 @@ export function TaskDetailPanel({
                           <span className="muted"> ({formatDurationSeconds(te.durationSeconds)})</span>
                         </>
                       ) : (
-                        <span className="badge badge-progress" style={{ fontSize: '0.7rem' }}>активна</span>
+                        <span className="badge badge-progress" style={{ fontSize: '0.65rem', marginLeft: '0.25rem' }}>
+                          активна
+                        </span>
                       )}
                     </li>
                   ))
@@ -203,45 +241,36 @@ export function TaskDetailPanel({
             </>
           )}
         </div>
-        <div>
-          <h3 className="muted" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-            Чеклист
-          </h3>
+        <div className="detail-well">
+          <h3 className="subsection-head">Чеклист</h3>
           {checklistLoading ? (
             <p className="muted">Загрузка…</p>
           ) : (
             <>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.75rem 0' }}>
+              <ul className="checklist-list">
                 {checklistItems.map((item) => (
-                  <li
-                    key={item.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      marginBottom: '0.35rem',
-                      fontSize: '0.9rem',
-                    }}
-                  >
+                  <li key={item.id} className="checklist-row">
                     <input
                       type="checkbox"
                       checked={item.done}
                       disabled={toggleCheckPending}
                       onChange={(e) => onToggleChecklistItem(item.id, e.target.checked)}
                     />
-                    <span style={{ flex: 1, textDecoration: item.done ? 'line-through' : undefined, opacity: item.done ? 0.75 : 1 }}>
-                      {item.title}
-                    </span>
-                    <button
+                    <span className={item.done ? 'checklist-done' : undefined}>{item.title}</span>
+                    <Button
                       type="button"
-                      className="btn btn-ghost"
-                      style={{ padding: '0.15rem 0.35rem' }}
+                      variant={ButtonVariants.GHOST}
+                      color={ButtonColors.NEUTRAL}
+                      size={ButtonSizes.SMALL}
+                      iconOnly
+                      className="btn-icon checklist-delete-btn"
+                      style={{ marginLeft: 'auto' }}
                       aria-label={`Удалить пункт: ${item.title}`}
                       disabled={deleteCheckPending}
                       onClick={() => onDeleteChecklistItem(item.id)}
                     >
                       <Trash2 size={14} aria-hidden />
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -258,57 +287,204 @@ export function TaskDetailPanel({
                     }
                   }}
                 />
-                <button
+                <Button
                   type="button"
-                  className="btn btn-primary"
-                  style={{ marginTop: '0.5rem' }}
-                  disabled={!checklistNewTitle.trim() || checklistAddPending}
+                  variant={ButtonVariants.FILLED}
+                  color={ButtonColors.PRIMARY}
+                  size={ButtonSizes.SMALL}
+                  style={{ marginTop: '0.55rem' }}
+                  loading={checklistAddPending}
+                  disabled={!checklistNewTitle.trim()}
                   onClick={onAddChecklist}
                 >
-                  Добавить
-                </button>
+                  Добавить пункт
+                </Button>
               </div>
             </>
           )}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: '1fr 1fr' }}>
-        <div>
-          <h3 className="muted" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-            Комментарии
+      <div className="detail-section-block">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <h3 className="subsection-head" style={{ margin: 0 }}>
+            Подзадачи
           </h3>
+          <Button
+            type="button"
+            variant={ButtonVariants.FILLED}
+            color={ButtonColors.PRIMARY}
+            size={ButtonSizes.SMALL}
+            onClick={onAddSubtask}
+          >
+            Добавить подзадачу
+          </Button>
+        </div>
+        {subtasksLoading ? (
+          <p className="muted">Загрузка…</p>
+        ) : subtasks.length === 0 ? (
+          <p className="muted" style={{ margin: 0 }}>
+            Пока нет подзадач.
+          </p>
+        ) : (
+          <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.1rem' }}>
+            {subtasks.map((s) => (
+              <li key={s.id} style={{ marginBottom: '0.35rem' }}>
+                <Button
+                  type="button"
+                  variant={ButtonVariants.GHOST}
+                  color={ButtonColors.NEUTRAL}
+                  size={ButtonSizes.SMALL}
+                  className="subtask-link-btn"
+                  onClick={() => onOpenSubtask(s.id)}
+                >
+                  {s.title}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="detail-grid-2">
+        <div className="detail-well">
+          <h3 className="subsection-head">Вложения</h3>
+          {attachmentsLoading ? (
+            <p className="muted">Загрузка…</p>
+          ) : (
+            <>
+              <ul className="checklist-list" style={{ marginBottom: '0.65rem' }}>
+                {attachments.length === 0 ? (
+                  <li className="muted" style={{ fontSize: '0.9rem' }}>
+                    Файлов нет
+                  </li>
+                ) : (
+                  attachments.map((a) => (
+                    <li key={a.id} className="checklist-row" style={{ alignItems: 'center' }}>
+                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {a.fileName}{' '}
+                        <span className="muted" style={{ fontSize: '0.78rem' }}>
+                          ({Math.round(a.sizeBytes / 1024)} КиБ)
+                        </span>
+                      </span>
+                      <Button
+                        type="button"
+                        variant={ButtonVariants.SOFT}
+                        color={ButtonColors.PRIMARY}
+                        size={ButtonSizes.SMALL}
+                        onClick={() => onDownloadAttachment(a.id, a.fileName)}
+                      >
+                        Скачать
+                      </Button>
+                    </li>
+                  ))
+                )}
+              </ul>
+              <input
+                type="file"
+                disabled={uploadAttachmentPending}
+                onChange={(e) => {
+                  onUploadAttachmentFiles(e.target.files);
+                  e.target.value = '';
+                }}
+              />
+            </>
+          )}
+        </div>
+        <div className="detail-well">
+          <h3 className="subsection-head">Напоминания</h3>
+          {remindersLoading ? (
+            <p className="muted">Загрузка…</p>
+          ) : (
+            <>
+              <ul className="time-entry-list" style={{ marginBottom: '0.65rem' }}>
+                {reminders.length === 0 ? (
+                  <li className="muted" style={{ fontSize: '0.9rem' }}>
+                    Нет напоминаний
+                  </li>
+                ) : (
+                  reminders.map((r) => (
+                    <li key={r.id} className="time-entry-row muted">
+                      {formatDt(r.remindAt)}
+                      {r.firedAt ? (
+                        <span className="muted"> (отправлено)</span>
+                      ) : null}
+                    </li>
+                  ))
+                )}
+              </ul>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label htmlFor="reminder-local">Когда напомнить</label>
+                <input
+                  id="reminder-local"
+                  type="datetime-local"
+                  value={reminderLocal}
+                  onChange={(e) => onReminderLocalChange(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant={ButtonVariants.FILLED}
+                  color={ButtonColors.PRIMARY}
+                  size={ButtonSizes.SMALL}
+                  style={{ marginTop: '0.55rem' }}
+                  loading={reminderPending}
+                  disabled={!reminderLocal}
+                  onClick={onAddReminder}
+                >
+                  Запланировать
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="detail-split">
+        <div>
+          <h3 className="subsection-head">Комментарии</h3>
           {commentsLoading ? (
             <p className="muted">Загрузка…</p>
           ) : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <ul className="comment-list">
               {comments.map((c) => (
-                <li key={c.id} style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--color-border)' }}>
-                  <div className="muted" style={{ fontSize: '0.8rem' }}>
+                <li key={c.id} className="comment-item">
+                  <div className="muted" style={{ fontSize: '0.78rem', marginBottom: '0.25rem' }}>
                     {formatDt(c.createdAt)}
                   </div>
-                  <div>{c.body}</div>
+                  <div style={{ lineHeight: 1.48 }}>{c.body}</div>
                 </li>
               ))}
             </ul>
           )}
-          <div className="field" style={{ marginTop: '0.75rem' }}>
-            <textarea value={commentText} onChange={(e) => onCommentChange(e.target.value)} rows={2} placeholder="Комментарий…" />
-            <button type="button" className="btn btn-primary" style={{ marginTop: '0.5rem' }} disabled={!commentText.trim() || commentPending} onClick={onSubmitComment}>
+          <div className="field" style={{ marginTop: '0.85rem' }}>
+            <textarea
+              value={commentText}
+              onChange={(e) => onCommentChange(e.target.value)}
+              rows={2}
+              placeholder="Напишите комментарий…"
+            />
+            <Button
+              type="button"
+              variant={ButtonVariants.FILLED}
+              color={ButtonColors.PRIMARY}
+              size={ButtonSizes.SMALL}
+              style={{ marginTop: '0.55rem' }}
+              loading={commentPending}
+              disabled={!commentText.trim()}
+              onClick={onSubmitComment}
+            >
               Отправить
-            </button>
+            </Button>
           </div>
         </div>
         <div>
-          <h3 className="muted" style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-            Активность
-          </h3>
+          <h3 className="subsection-head">Активность</h3>
           {activityLoading ? (
             <p className="muted">Загрузка…</p>
           ) : (
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: 280, overflow: 'auto' }}>
+            <ul className="activity-list activity-list--scroll">
               {activity.map((a) => (
-                <li key={a.id} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                <li key={a.id} className="activity-item">
                   <span className="muted">{formatDt(a.createdAt)}</span> — {a.summary}
                 </li>
               ))}

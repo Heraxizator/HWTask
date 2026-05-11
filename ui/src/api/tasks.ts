@@ -60,3 +60,7 @@ export function updateTask(
 export function deleteTask(id: string): Promise<void> {
   return fetchVoid(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
+
+export function listSubtasks(taskId: string): Promise<TaskResponse[]> {
+  return fetchJson<TaskResponse[]>(`${BASE}/${encodeURIComponent(taskId)}/subtasks`);
+}

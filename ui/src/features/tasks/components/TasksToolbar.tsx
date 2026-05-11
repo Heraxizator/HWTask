@@ -16,32 +16,13 @@ export function TasksToolbar({
   onToggleFilterTag: (tagId: string) => void;
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '0.75rem',
-        alignItems: 'flex-end',
-        marginBottom: '1rem',
-      }}
-    >
-      <div className="field" style={{ flex: '1 1 220px', marginBottom: 0 }}>
-        <label htmlFor="task-search" className="muted" style={{ fontSize: '0.85rem' }}>
+    <div className="tasks-toolbar">
+      <div className="field tasks-toolbar__search">
+        <label htmlFor="task-search" className="toolbar-label">
           Поиск
         </label>
-        <div style={{ position: 'relative' }}>
-          <Search
-            size={16}
-            style={{
-              position: 'absolute',
-              left: '0.65rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              opacity: 0.45,
-              pointerEvents: 'none',
-            }}
-            aria-hidden
-          />
+        <div className="search-shell">
+          <Search size={16} aria-hidden />
           <input
             id="task-search"
             type="search"
@@ -49,36 +30,26 @@ export function TasksToolbar({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Название или описание…"
             autoComplete="off"
-            style={{ paddingLeft: '2.25rem', width: '100%' }}
+            className="portal-field__input portal-field__input--sm tasks-toolbar__search-input"
           />
         </div>
       </div>
-      <div style={{ flex: '2 1 280px' }}>
-        <span className="muted" style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.35rem' }}>
-          Теги
-        </span>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+      <div className="tasks-toolbar__tags">
+        <span className="toolbar-label">Теги</span>
+        <div className="tag-filter-row">
           {tags.length === 0 ? (
-            <span className="muted" style={{ fontSize: '0.9rem' }}>Нет тегов в проекте</span>
+            <span className="muted" style={{ fontSize: '0.9rem' }}>
+              Нет тегов в проекте
+            </span>
           ) : (
             tags.map((tag) => (
-              <label
-                key={tag.id}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
+              <label key={tag.id} className="tag-filter-pill">
                 <input
                   type="checkbox"
                   checked={filterTagIds.includes(tag.id)}
                   onChange={() => onToggleFilterTag(tag.id)}
                 />
-                <Tag size={14} aria-hidden />
+                <Tag size={14} aria-hidden strokeWidth={2} />
                 {tag.name}
               </label>
             ))

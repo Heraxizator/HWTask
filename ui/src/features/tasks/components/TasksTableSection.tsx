@@ -1,8 +1,24 @@
-import { Loader2, MessageSquare, Pencil, Trash2 } from 'lucide-react';
+import { ClipboardList, Loader2, MessageSquare, Pencil, Trash2 } from 'lucide-react';
 
 import type { TagResponse } from '../../../api/tags';
-import type { TaskResponse } from '../../../types/task';
-import { formatDt, statusBadgeClass, statusLabel } from '../taskDisplay';
+import {
+  Badge,
+  BadgeColor,
+  BadgeSize,
+  BadgeType,
+  Button,
+  ButtonColors,
+  ButtonSizes,
+  ButtonVariants,
+} from '../../../portal-ui';
+import type { TaskResponse, TaskStatus } from '../../../types/task';
+import { formatDt, statusLabel } from '../taskDisplay';
+
+function badgeColorForStatus(s: TaskStatus): (typeof BadgeColor)[keyof typeof BadgeColor] {
+  if (s === 'DONE') return BadgeColor.SUCCESS;
+  if (s === 'IN_PROGRESS') return BadgeColor.PRIMARY;
+  return BadgeColor.NEUTRAL;
+}
 import { TasksToolbar } from './TasksToolbar';
 
 export function TasksTableSection({
@@ -49,15 +65,28 @@ export function TasksTableSection({
   return (
     <section className="panel">
       {!projectId ? (
-        <div className="state-block">Выберите или создайте проект (организация → проект).</div>
+        <div className="state-block state-block--rich">
+          <div className="state-block__icon" aria-hidden>
+            <ClipboardList size={26} strokeWidth={1.75} />
+          </div>
+          <p className="state-block__title">Выберите проект</p>
+          <p className="state-block__lead">Создайте организацию и проект через API или выберите доступный проект выше.</p>
+        </div>
       ) : loadingList ? (
-        <div className="state-block" aria-live="polite">
-          <Loader2 size={28} className="spin" style={{ animation: 'spin 0.9s linear infinite', color: 'var(--color-accent)', marginBottom: '0.75rem' }} aria-hidden />
-          <strong>Загрузка…</strong>
+        <div className="state-block state-block--rich" aria-live="polite">
+          <div className="state-block__icon" aria-hidden>
+            <Loader2 size={28} className="spin" strokeWidth={2} />
+          </div>
+          <p className="state-block__title">Загрузка задач…</p>
+          <p className="state-block__lead muted">Подождите, получаем список для выбранного проекта.</p>
         </div>
       ) : tasks.length === 0 && !listErr ? (
-        <div className="state-block">
-          <p style={{ margin: 0 }}>В проекте пока нет задач.</p>
+        <div className="state-block state-block--rich">
+          <div className="state-block__icon" aria-hidden>
+            <ClipboardList size={26} strokeWidth={1.75} />
+          </div>
+          <p className="state-block__title">Пока тихо</p>
+          <p className="state-block__lead">В этом проекте ещё нет задач. Нажмите «Новая задача», чтобы начать работу.</p>
         </div>
       ) : (
         <>
@@ -76,37 +105,35 @@ export function TasksTableSection({
                   <th>Статус</th>
                   <th>Срок (UTC)</th>
                   <th>Обновлено</th>
-                  <th style={{ width: '1%', textAlign: 'right' }} aria-label="Действия" />
+                  <th className="tasks-table__actions" aria-label="Действия" />
                 </tr>
               </thead>
               <tbody>
                 {tasks.map((t: TaskResponse) => (
-                  <tr key={t.id}>
+                  <tr key={t.id} className={detailId === t.id ? 'is-row-active' : undefined}>
                     <td>
-                      <button
+                      <Button
                         type="button"
-                        className="btn btn-ghost"
-                        style={{ fontWeight: 600, textAlign: 'left', padding: 0 }}
+                        variant={ButtonVariants.GHOST}
+                        color={ButtonColors.NEUTRAL}
+                        size={ButtonSizes.MEDIUM}
+                        className="task-title-btn"
                         onClick={() => onToggleDetail(t.id)}
                       >
                         {t.title}
                         {detailId === t.id && (
-                          <MessageSquare size={14} style={{ marginLeft: '0.35rem', opacity: 0.7 }} aria-hidden />
+                          <MessageSquare size={14} style={{ marginLeft: '0.35rem', opacity: 0.72 }} aria-hidden />
                         )}
-                      </button>
+                      </Button>
                       {t.description && (
-                        <div className="muted" style={{ marginTop: '0.2rem' }}>
+                        <div className="muted task-desc-snippet">
                           {t.description.length > 120 ? `${t.description.slice(0, 117)}…` : t.description}
                         </div>
                       )}
                       {(t.tags?.length ?? 0) > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.35rem' }}>
+                        <div className="chip-tags">
                           {(t.tags ?? []).map((tg) => (
-                            <span
-                              key={tg.id}
-                              className="badge"
-                              style={{ fontSize: '0.7rem', fontWeight: 500 }}
-                            >
+                            <span key={tg.id} className="chip-tag">
                               {tg.name}
                             </span>
                           ))}
@@ -114,18 +141,41 @@ export function TasksTableSection({
                       )}
                     </td>
                     <td>
-                      <span className={statusBadgeClass(t.status)}>{statusLabel(t.status)}</span>
+                      <Badge
+                        type={BadgeType.SOFT}
+                        color={badgeColorForStatus(t.status)}
+                        size={BadgeSize.SMALL}
+                        text={statusLabel(t.status)}
+                      />
                     </td>
                     <td className="muted">{t.dueAt ? formatDt(t.dueAt) : '—'}</td>
                     <td className="muted">{formatDt(t.updatedAt)}</td>
-                    <td>
+                    <td className="tasks-table__actions">
                       <div className="row-actions">
-                        <button type="button" className="btn btn-ghost" onClick={() => void onEdit(t.id)} aria-label={`Редактировать: ${t.title}`}>
+                        <Button
+                          type="button"
+                          variant={ButtonVariants.GHOST}
+                          color={ButtonColors.NEUTRAL}
+                          size={ButtonSizes.MEDIUM}
+                          iconOnly
+                          className="btn-icon"
+                          onClick={() => void onEdit(t.id)}
+                          aria-label={`Редактировать: ${t.title}`}
+                        >
                           <Pencil size={16} aria-hidden />
-                        </button>
-                        <button type="button" className="btn btn-danger" onClick={() => onRequestDelete(t.id)} aria-label={`Удалить: ${t.title}`}>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={ButtonVariants.FILLED}
+                          color={ButtonColors.DANGER}
+                          size={ButtonSizes.MEDIUM}
+                          iconOnly
+                          className="btn-icon"
+                          onClick={() => onRequestDelete(t.id)}
+                          aria-label={`Удалить: ${t.title}`}
+                        >
                           <Trash2 size={16} aria-hidden />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -135,22 +185,36 @@ export function TasksTableSection({
           </div>
 
           <footer className="pagination">
-            <span>
-              Страница {listNumber + 1} из {Math.max(totalPages, 1)}
-              {totalElements != null && ` · всего ${totalElements}`}
+            <span className="pagination-meta">
+              Страница <strong>{listNumber + 1}</strong> из <strong>{Math.max(totalPages, 1)}</strong>
+              {totalElements != null && (
+                <>
+                  {' '}
+                  · <span className="muted">записей: {totalElements}</span>
+                </>
+              )}
             </span>
             <div className="pagination-controls">
-              <button type="button" className="btn btn-ghost" disabled={page <= 0} onClick={onPagePrev}>
-                Назад
-              </button>
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost"
+                variant={ButtonVariants.GHOST}
+                color={ButtonColors.NEUTRAL}
+                size={ButtonSizes.SMALL}
+                disabled={page <= 0}
+                onClick={onPagePrev}
+              >
+                Назад
+              </Button>
+              <Button
+                type="button"
+                variant={ButtonVariants.GHOST}
+                color={ButtonColors.NEUTRAL}
+                size={ButtonSizes.SMALL}
                 disabled={totalPages === 0 || page >= totalPages - 1}
                 onClick={onPageNext}
               >
                 Вперёд
-              </button>
+              </Button>
             </div>
           </footer>
         </>

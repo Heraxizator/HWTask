@@ -5,6 +5,18 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError } from '../../../api/http';
 import { createProjectTag, listProjectTags, setTaskTags } from '../../../api/tags';
 import { getTask } from '../../../api/tasks';
+import {
+  Button,
+  ButtonColors,
+  ButtonSizes,
+  ButtonVariants,
+  CheckboxField,
+  InputField,
+  InputSizes,
+  InputTypes,
+  SelectField,
+  TextAreaField,
+} from '../../../portal-ui';
 import type {
   CreateTaskRequest,
   TaskPriority,
@@ -17,6 +29,7 @@ import { PRIORITY_OPTIONS, STATUS_OPTIONS, priorityLabel, statusLabel, toDatetim
 export function TaskFormModal({
   projectId,
   editingId,
+  parentTaskId,
   onClose,
   onError,
   errorMessage,
@@ -25,6 +38,7 @@ export function TaskFormModal({
 }: {
   projectId: string;
   editingId: string | null;
+  parentTaskId?: string | null;
   onClose: () => void;
   onError: (msg: string | null) => void;
   errorMessage: string | null;
@@ -117,6 +131,7 @@ export function TaskFormModal({
     } else {
       const body: CreateTaskRequest = {
         projectId,
+        parentTaskId: parentTaskId ?? undefined,
         title: t,
         description: description.trim() || null,
         status,
@@ -144,130 +159,177 @@ export function TaskFormModal({
         if (ev.target === ev.currentTarget) onClose();
       }}
     >
-      <div className="modal panel" role="dialog" aria-modal="true" aria-labelledby="task-form-title" onClick={(e) => e.stopPropagation()}>
-        <h2 id="task-form-title">{isEdit ? 'Редактировать' : 'Новая задача'}</h2>
+      <div
+        className="modal modal--wide panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="task-form-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="task-form-title">
+          {isEdit ? 'Редактировать' : parentTaskId ? 'Новая подзадача' : 'Новая задача'}
+        </h2>
 
         {loadDetail ? (
           <div className="state-block">
             <Loader2 size={24} style={{ animation: 'spin 0.9s linear infinite', color: 'var(--color-accent)' }} aria-hidden />
           </div>
         ) : (
-          <form onSubmit={(e) => void handleSubmit(e)}>
-            {errorMessage && (
-              <div className="alert" role="alert" style={{ marginBottom: '1rem' }}>
-                {errorMessage}
+          <form className="modal-form" onSubmit={(e) => void handleSubmit(e)}>
+            <div className="modal-form__scroll">
+              {errorMessage && (
+                <div className="alert" role="alert" style={{ marginBottom: '1rem' }}>
+                  {errorMessage}
+                </div>
+              )}
+
+              <InputField
+                id="task-title"
+                name="title"
+                label="Название"
+                value={title}
+                onChange={setTitle}
+                autoComplete="off"
+                size={InputSizes.MEDIUM}
+                type={InputTypes.DEFAULT}
+              />
+
+              <TextAreaField
+                id="task-desc"
+                name="description"
+                label="Описание"
+                value={description}
+                onChange={setDescription}
+                maxLength={10000}
+                rows={5}
+                size={InputSizes.MEDIUM}
+                textAreaClassName="modal-form__textarea"
+              />
+
+              <div className="portal-field">
+                <label className="portal-field__label" htmlFor="task-due">
+                  Срок
+                </label>
+                <input
+                  id="task-due"
+                  name="dueAt"
+                  type="datetime-local"
+                  value={dueLocal}
+                  onChange={(e) => setDueLocal(e.target.value)}
+                  className="portal-field__input portal-field__input--md"
+                  style={{ width: '100%', boxSizing: 'border-box' }}
+                />
               </div>
-            )}
 
-            <div className="field">
-              <label htmlFor="task-title">Название</label>
-              <input id="task-title" name="title" value={title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" maxLength={255} required />
-            </div>
-
-            <div className="field">
-              <label htmlFor="task-desc">Описание</label>
-              <textarea id="task-desc" name="description" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={10000} />
-            </div>
-
-            <div className="field">
-              <label htmlFor="task-due">Срок</label>
-              <input id="task-due" type="datetime-local" value={dueLocal} onChange={(e) => setDueLocal(e.target.value)} />
-            </div>
-
-            <div className="field">
-              <label htmlFor="task-status">Статус</label>
-              <select id="task-status" name="status" value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
+              <SelectField
+                id="task-status"
+                name="status"
+                label="Статус"
+                value={status}
+                onChange={(v) => setStatus(v as TaskStatus)}
+              >
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
                     {statusLabel(s)}
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
 
-            <div className="field">
-              <label htmlFor="task-priority">Приоритет</label>
-              <select id="task-priority" name="priority" value={priority} onChange={(e) => setPriority((e.target.value || '') as TaskPriority | '')}>
+              <SelectField
+                id="task-priority"
+                name="priority"
+                label="Приоритет"
+                value={priority === '' ? '' : priority}
+                onChange={(v) => setPriority((v || '') as TaskPriority | '')}
+              >
                 <option value="">Не задан</option>
                 {PRIORITY_OPTIONS.filter(Boolean).map((p) => (
                   <option key={p} value={p}>
                     {priorityLabel(p as TaskPriority)}
                   </option>
                 ))}
-              </select>
-            </div>
+              </SelectField>
 
-            <div className="field">
-              <span className="muted" style={{ fontSize: '0.9rem', display: 'block', marginBottom: '0.35rem' }}>
-                Теги
-              </span>
-              {projectTagsQuery.isLoading ? (
-                <p className="muted" style={{ margin: 0 }}>Загрузка тегов…</p>
-              ) : (projectTagsQuery.data ?? []).length === 0 ? (
-                <p className="muted" style={{ margin: 0 }}>Пока нет тегов — создайте ниже.</p>
-              ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {(projectTagsQuery.data ?? []).map((tag) => (
-                    <label
-                      key={tag.id}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
+              <div style={{ marginTop: '0.25rem' }}>
+                <span className="muted" style={{ fontSize: '0.9rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Теги
+                </span>
+                {projectTagsQuery.isLoading ? (
+                  <p className="muted" style={{ margin: 0 }}>Загрузка тегов…</p>
+                ) : (projectTagsQuery.data ?? []).length === 0 ? (
+                  <p className="muted" style={{ margin: 0 }}>Пока нет тегов — создайте ниже.</p>
+                ) : (
+                  <div className="modal-form__tags">
+                    {(projectTagsQuery.data ?? []).map((tag) => (
+                      <CheckboxField
+                        key={tag.id}
+                        label={tag.name}
                         checked={selectedTagIds.includes(tag.id)}
-                        onChange={(e) => {
-                          const on = e.target.checked;
+                        onChange={(on) =>
                           setSelectedTagIds((prev) =>
                             on ? [...prev, tag.id] : prev.filter((id) => id !== tag.id),
-                          );
-                        }}
+                          )
+                        }
                       />
-                      {tag.name}
-                    </label>
-                  ))}
-                </div>
-              )}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.65rem' }}>
-                <input
-                  type="text"
-                  value={newTagName}
-                  onChange={(e) => setNewTagName(e.target.value)}
-                  placeholder="Новый тег…"
-                  maxLength={64}
-                  style={{ flex: '1 1 160px', minWidth: 0 }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const n = newTagName.trim();
-                      if (n) createTagMut.mutate(n);
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={!newTagName.trim() || createTagMut.isPending}
-                  onClick={() => createTagMut.mutate(newTagName.trim())}
+                    ))}
+                  </div>
+                )}
+                <div
+                  className="modal-form__new-tag"
+                  style={{ marginTop: '0.65rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}
                 >
-                  Создать тег
-                </button>
+                  <input
+                    type="text"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="Новый тег…"
+                    maxLength={64}
+                    className="portal-field__input portal-field__input--sm"
+                    style={{ flex: '1 1 160px', minWidth: 0 }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const n = newTagName.trim();
+                        if (n) createTagMut.mutate(n);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant={ButtonVariants.GHOST}
+                    color={ButtonColors.NEUTRAL}
+                    size={ButtonSizes.MEDIUM}
+                    disabled={!newTagName.trim() || createTagMut.isPending}
+                    onClick={() => createTagMut.mutate(newTagName.trim())}
+                  >
+                    Создать тег
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <div className="modal-actions">
-              <button type="button" className="btn btn-ghost" onClick={onClose} disabled={pending}>
-                Отмена
-              </button>
-              <button type="submit" className="btn btn-primary" disabled={pending}>
-                {pending ? 'Сохранение…' : isEdit ? 'Сохранить' : 'Создать'}
-              </button>
+            <div className="modal-form__footer">
+              <div className="modal-actions">
+                <Button
+                  type="button"
+                  variant={ButtonVariants.GHOST}
+                  color={ButtonColors.NEUTRAL}
+                  size={ButtonSizes.MEDIUM}
+                  onClick={onClose}
+                  disabled={pending}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  type="submit"
+                  variant={ButtonVariants.FILLED}
+                  color={ButtonColors.PRIMARY}
+                  size={ButtonSizes.MEDIUM}
+                  loading={pending}
+                >
+                  {isEdit ? 'Сохранить' : 'Создать'}
+                </Button>
+              </div>
             </div>
           </form>
         )}

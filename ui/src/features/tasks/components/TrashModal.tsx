@@ -1,4 +1,10 @@
 import type { TaskTrashEntryResponse } from '../../../api/trash';
+import {
+  Button,
+  ButtonColors,
+  ButtonSizes,
+  ButtonVariants,
+} from '../../../portal-ui';
 
 export function TrashModal({
   loading,
@@ -26,65 +32,64 @@ export function TrashModal({
       }}
     >
       <div
-        className="modal panel"
+        className="modal modal--wide panel"
         role="dialog"
         aria-modal="true"
         aria-labelledby="trash-title"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: 520, width: '100%' }}
       >
-        <h2 id="trash-title" style={{ marginTop: 0 }}>Корзина</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Удалённые задачи проекта. Восстановление вернёт задачу в список.
+        <h2 id="trash-title">Корзина</h2>
+        <p className="muted" style={{ marginTop: 0, lineHeight: 1.5 }}>
+          Удалённые задачи проекта. Восстановление вернёт задачу в список активных задач.
         </p>
         {loading ? (
           <p className="muted">Загрузка…</p>
         ) : items.length === 0 ? (
-          <p className="muted" style={{ marginBottom: '1rem' }}>Корзина пуста</p>
+          <div className="state-block state-block--rich" style={{ padding: '2rem 1rem' }}>
+            <p className="state-block__title">Корзина пуста</p>
+            <p className="state-block__lead">Удалённые задачи будут показаны здесь.</p>
+          </div>
         ) : (
-          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1rem 0', maxHeight: 280, overflow: 'auto' }}>
+          <ul className="trash-list">
             {items.map((row) => (
-              <li
-                key={row.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  padding: '0.5rem 0',
-                  borderBottom: '1px solid var(--color-border)',
-                  fontSize: '0.9rem',
-                }}
-              >
-                <span style={{ flex: 1, minWidth: 0 }}>{row.title}</span>
-                <div style={{ display: 'flex', flexShrink: 0, gap: '0.35rem' }}>
-                  <button
+              <li key={row.id} className="trash-row">
+                <span className="trash-row__title">{row.title}</span>
+                <div className="trash-row__actions">
+                  <Button
                     type="button"
-                    className="btn btn-primary"
-                    style={{ fontSize: '0.85rem', padding: '0.25rem 0.5rem' }}
+                    variant={ButtonVariants.FILLED}
+                    color={ButtonColors.PRIMARY}
+                    size={ButtonSizes.SMALL}
                     disabled={restorePending}
                     onClick={() => onRestore(row.id)}
                   >
                     Восстановить
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-danger"
-                    style={{ fontSize: '0.85rem', padding: '0.25rem 0.5rem' }}
+                    variant={ButtonVariants.FILLED}
+                    color={ButtonColors.DANGER}
+                    size={ButtonSizes.SMALL}
                     disabled={purgePending}
                     onClick={() => onPurge(row.id)}
                   >
-                    Удалить навсегда
-                  </button>
+                    Навсегда
+                  </Button>
                 </div>
               </li>
             ))}
           </ul>
         )}
         <div className="modal-actions" style={{ marginTop: '0.5rem' }}>
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <Button
+            type="button"
+            variant={ButtonVariants.GHOST}
+            color={ButtonColors.NEUTRAL}
+            size={ButtonSizes.MEDIUM}
+            onClick={onClose}
+          >
             Закрыть
-          </button>
+          </Button>
         </div>
       </div>
     </div>

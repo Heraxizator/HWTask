@@ -11,7 +11,16 @@ import {
   listChecklist,
   updateChecklistItem,
 } from '../../api/checklist';
-import { listActivity, listComments, postComment } from '../../api/collaboration';
+import {
+  createReminder,
+  downloadAttachmentFile,
+  listActivity,
+  listAttachments,
+  listComments,
+  listReminders,
+  postComment,
+  uploadAttachment,
+} from '../../api/collaboration';
 import {
   getUnreadNotificationCount,
   listNotifications,
@@ -35,16 +44,30 @@ import {
   createTask,
   deleteTask,
   getTask,
+  listSubtasks,
   listTasks,
   updateTask,
 } from '../../api/tasks';
+import {
+  Button,
+  ButtonColors,
+  ButtonSizes,
+  ButtonVariants,
+} from '../../portal-ui';
 import { ApiError, clearStoredToken } from '../../api/http';
+import { getMe } from '../../api/me';
 import { listOrganizations, listProjects } from '../../api/workspace';
 import type { CreateTaskRequest, UpdateTaskRequest } from '../../types/task';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
+import {
+  AutomationRulesModal,
+  MembersModal,
+  ReportsModal,
+  WorkspaceModal,
+} from './components/ProjectToolsModals';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { TaskFormModal } from './components/TaskFormModal';
-import { TasksHeader, type ProjectOption } from './components/TasksHeader';
+import { TasksHeader } from './components/TasksHeader';
 import { TasksTableSection } from './components/TasksTableSection';
 import { TrashModal } from './components/TrashModal';
 
@@ -71,6 +94,12 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [checklistNewTitle, setChecklistNewTitle] = useState('');
+  const [parentTaskForCreate, setParentTaskForCreate] = useState<string | null>(null);
+  const [reminderLocal, setReminderLocal] = useState('');
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const [automationOpen, setAutomationOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
@@ -79,21 +108,31 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
 
   const workspaceQuery = useQuery({
     queryKey: ['workspace', 'flat-projects'],
-    queryFn: async (): Promise<ProjectOption[]> => {
+    queryFn: async () => {
       const orgs = await listOrganizations();
-      const pairs: ProjectOption[] = [];
+      const projectOptions = [];
       for (const o of orgs) {
         const ps = await listProjects(o.id);
         for (const p of ps) {
-          pairs.push({ label: `${o.name} / ${p.name}`, projectId: p.id });
+          projectOptions.push({
+            label: `${o.name} / ${p.name}`,
+            projectId: p.id,
+            organizationId: o.id,
+          });
         }
       }
-      return pairs;
+      return { organizations: orgs, projectOptions };
     },
   });
 
+  const meQuery = useQuery({
+    queryKey: ['me'],
+    queryFn: getMe,
+    staleTime: 60_000,
+  });
+
   useEffect(() => {
-    const opts = workspaceQuery.data;
+    const opts = workspaceQuery.data?.projectOptions;
     if (!opts?.length) return;
     const saved = localStorage.getItem(PROJECT_STORAGE_KEY);
     if (saved && opts.some((o) => o.projectId === saved)) {
@@ -182,6 +221,24 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
     enabled: !!detailId,
   });
 
+  const subtasksQuery = useQuery({
+    queryKey: ['tasks', 'subtasks', detailId],
+    queryFn: () => listSubtasks(detailId!),
+    enabled: !!detailId,
+  });
+
+  const attachmentsQuery = useQuery({
+    queryKey: ['tasks', 'attachments', detailId],
+    queryFn: () => listAttachments(detailId!),
+    enabled: !!detailId,
+  });
+
+  const remindersQuery = useQuery({
+    queryKey: ['tasks', 'reminders', detailId],
+    queryFn: () => listReminders(detailId!),
+    enabled: !!detailId,
+  });
+
   const commentMut = useMutation({
     mutationFn: () => postComment(detailId!, commentText.trim()),
     onSuccess: () => {
@@ -193,8 +250,13 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
 
   const createMut = useMutation({
     mutationFn: (body: CreateTaskRequest) => createTask(body),
-    onSuccess: () => {
+    onSuccess: (_data, body) => {
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      if (body.parentTaskId) {
+        void queryClient.invalidateQueries({
+          queryKey: ['tasks', 'subtasks', body.parentTaskId],
+        });
+      }
       closeForm();
     },
     onError: onMutError,
@@ -294,6 +356,22 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
     },
   });
 
+  const uploadAttachmentMut = useMutation({
+    mutationFn: (file: File) => uploadAttachment(detailId!, file),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'attachments', detailId] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'activity', detailId] });
+    },
+  });
+
+  const addReminderMut = useMutation({
+    mutationFn: (iso: string) => createReminder(detailId!, iso),
+    onSuccess: () => {
+      setReminderLocal('');
+      void queryClient.invalidateQueries({ queryKey: ['tasks', 'reminders', detailId] });
+    },
+  });
+
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteTask(id),
     onSuccess: () => {
@@ -321,17 +399,27 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
   function closeForm() {
     setFormOpen(false);
     setEditingId(null);
+    setParentTaskForCreate(null);
     setFormError(null);
   }
 
   function openCreate() {
     setEditingId(null);
+    setParentTaskForCreate(null);
+    setFormError(null);
+    setFormOpen(true);
+  }
+
+  function openCreateSubtask(parentId: string) {
+    setEditingId(null);
+    setParentTaskForCreate(parentId);
     setFormError(null);
     setFormOpen(true);
   }
 
   function openEdit(id: string) {
     setFormError(null);
+    setParentTaskForCreate(null);
     setEditingId(id);
     setFormOpen(true);
   }
@@ -345,7 +433,11 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
       : 'Ошибка загрузки'
     : null;
 
-  const projectOptions = workspaceQuery.data ?? [];
+  const projectOptions = workspaceQuery.data?.projectOptions ?? [];
+  const organizations = workspaceQuery.data?.organizations ?? [];
+  const meSummary = meQuery.data
+    ? `${meQuery.data.displayName || meQuery.data.email}`
+    : null;
   const unreadCount = unreadQuery.data?.count ?? 0;
   const notificationItems = notificationsQuery.data?.content ?? [];
   const trashItems = trashQuery.data?.content ?? [];
@@ -375,9 +467,33 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
     setChecklistNewTitle('');
   }
 
+  function addReminderFromField() {
+    if (!detailId || !reminderLocal) return;
+    const iso = new Date(reminderLocal).toISOString();
+    addReminderMut.mutate(iso);
+  }
+
+  async function handleDownloadAttachment(attachmentId: string, fileName: string) {
+    if (!detailId) return;
+    try {
+      const blob = await downloadAttachmentFile(detailId, attachmentId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      const msg =
+        e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Ошибка скачивания';
+      window.alert(msg);
+    }
+  }
+
   return (
     <div className="app-shell">
       <TasksHeader
+        currentUserSummary={meSummary}
         projectOptions={projectOptions}
         projectId={projectId}
         onProjectChange={(v) => {
@@ -404,22 +520,67 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
         }}
       />
 
-      {workspaceQuery.isLoading && (
-        <div className="muted" style={{ marginBottom: '0.75rem' }}>
-          Загрузка организаций…
-        </div>
-      )}
-      {workspaceQuery.error && (
-        <div className="alert" role="alert">
-          Создайте организацию через API или войдите как демо-пользователь.
-        </div>
-      )}
+      <div className="project-toolbar" role="toolbar" aria-label="Проект">
+        <Button
+          type="button"
+          variant={ButtonVariants.SOFT}
+          color={ButtonColors.PRIMARY}
+          size={ButtonSizes.SMALL}
+          disabled={!projectId}
+          onClick={() => setReportsOpen(true)}
+        >
+          Сводки
+        </Button>
+        <Button
+          type="button"
+          variant={ButtonVariants.SOFT}
+          color={ButtonColors.PRIMARY}
+          size={ButtonSizes.SMALL}
+          disabled={!projectId}
+          onClick={() => setMembersOpen(true)}
+        >
+          Участники
+        </Button>
+        <Button
+          type="button"
+          variant={ButtonVariants.SOFT}
+          color={ButtonColors.PRIMARY}
+          size={ButtonSizes.SMALL}
+          disabled={!projectId}
+          onClick={() => setAutomationOpen(true)}
+        >
+          Автоправила
+        </Button>
+        <Button
+          type="button"
+          variant={ButtonVariants.SOFT}
+          color={ButtonColors.PRIMARY}
+          size={ButtonSizes.SMALL}
+          onClick={() => setWorkspaceOpen(true)}
+        >
+          Организация / проект
+        </Button>
+      </div>
 
-      {listErr && (
-        <div className="alert" role="alert">
-          {listErr}
-        </div>
-      )}
+      <div className="flash-messages">
+        {workspaceQuery.isLoading && (
+          <div className="workspace-hint">
+            <span className="workspace-hint__dot" aria-hidden />
+            Загружаем организации и проекты…
+          </div>
+        )}
+        {workspaceQuery.error && (
+          <div className="alert" role="alert">
+            Создайте организацию через API или войдите как демо-пользователь.
+          </div>
+        )}
+
+        {listErr && (
+          <div className="alert" role="alert">
+            {listErr}
+          </div>
+        )}
+      </div>
 
       <TasksTableSection
         projectId={projectId}
@@ -485,16 +646,33 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
           unmutePending={unmuteMut.isPending}
           onMute={() => muteMut.mutate()}
           onUnmute={() => unmuteMut.mutate()}
+          subtasksLoading={subtasksQuery.isLoading}
+          subtasks={subtasksQuery.data ?? []}
+          onOpenSubtask={(id) => setDetailId(id)}
+          onAddSubtask={() => detailId && openCreateSubtask(detailId)}
+          attachmentsLoading={attachmentsQuery.isLoading}
+          attachments={attachmentsQuery.data ?? []}
+          uploadAttachmentPending={uploadAttachmentMut.isPending}
+          onUploadAttachmentFiles={(files) => {
+            const f = files?.[0];
+            if (f) uploadAttachmentMut.mutate(f);
+          }}
+          onDownloadAttachment={handleDownloadAttachment}
+          remindersLoading={remindersQuery.isLoading}
+          reminders={remindersQuery.data ?? []}
+          reminderLocal={reminderLocal}
+          onReminderLocalChange={setReminderLocal}
+          onAddReminder={addReminderFromField}
+          reminderPending={addReminderMut.isPending}
         />
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-
       {formOpen && projectId && (
         <TaskFormModal
-          key={editingId ?? 'create'}
+          key={editingId ?? parentTaskForCreate ?? 'create'}
           projectId={projectId}
           editingId={editingId}
+          parentTaskId={parentTaskForCreate}
           onClose={closeForm}
           onError={setFormError}
           errorMessage={formError}
@@ -528,6 +706,22 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
           onPurge={(id) => purgeMut.mutate(id)}
         />
       )}
+
+      <ReportsModal open={reportsOpen} projectId={projectId} onClose={() => setReportsOpen(false)} />
+      <AutomationRulesModal
+        open={automationOpen}
+        projectId={projectId}
+        onClose={() => setAutomationOpen(false)}
+      />
+      <MembersModal open={membersOpen} projectId={projectId} onClose={() => setMembersOpen(false)} />
+      <WorkspaceModal
+        open={workspaceOpen}
+        organizations={organizations}
+        onClose={() => setWorkspaceOpen(false)}
+        onChanged={() => {
+          void workspaceQuery.refetch();
+        }}
+      />
     </div>
   );
 }

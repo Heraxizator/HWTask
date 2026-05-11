@@ -1,8 +1,19 @@
 import { useMutation } from '@tanstack/react-query';
-import { AlertCircle, KanbanSquare, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle, KanbanSquare } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { login, register } from '../../api/auth';
 import { ApiError, clearStoredToken, setStoredToken } from '../../api/http';
+import {
+  Button,
+  ButtonColors,
+  ButtonSizes,
+  ButtonVariants,
+  InputField,
+  InputSizes,
+  InputTypes,
+  TabSizes,
+  Tabs,
+} from '../../portal-ui';
 
 export function LoginPage({
   onLoggedIn,
@@ -14,6 +25,15 @@ export function LoginPage({
   const [password, setPassword] = useState('demo');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [tabSize, setTabSize] = useState<(typeof TabSizes)[keyof typeof TabSizes]>(TabSizes.MEDIUM);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const apply = () => setTabSize(mq.matches ? TabSizes.LARGE : TabSizes.MEDIUM);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
 
   const authMut = useMutation({
     mutationFn: async () => {
@@ -77,29 +97,21 @@ export function LoginPage({
               <p className="auth-card__subtitle">Вход в трекер задач организации</p>
             </header>
 
-            <nav className="auth-tabs" role="tablist" aria-label="Режим авторизации">
-              <button
-                type="button"
-                role="tab"
+            <nav className="portal-tabs-nav" role="tablist" aria-label="Режим авторизации">
+              <Tabs
                 id="tab-login"
-                aria-selected={mode === 'login'}
-                aria-controls="auth-panel"
-                className="auth-tab"
+                label="Вход"
+                size={tabSize}
+                isActive={mode === 'login'}
                 onClick={() => switchMode('login')}
-              >
-                Вход
-              </button>
-              <button
-                type="button"
-                role="tab"
+              />
+              <Tabs
                 id="tab-register"
-                aria-selected={mode === 'register'}
-                aria-controls="auth-panel"
-                className="auth-tab"
+                label="Регистрация"
+                size={tabSize}
+                isActive={mode === 'register'}
                 onClick={() => switchMode('register')}
-              >
-                Регистрация
-              </button>
+              />
             </nav>
 
             <div id="auth-panel" role="tabpanel" aria-labelledby={mode === 'login' ? 'tab-login' : 'tab-register'}>
@@ -117,55 +129,52 @@ export function LoginPage({
                   authMut.mutate();
                 }}
               >
-                {mode === 'register' && (
-                  <div className="field">
-                    <label htmlFor="dn">Имя</label>
-                    <input
+                <div className="auth-form__fields">
+                  {mode === 'register' && (
+                    <InputField
                       id="dn"
-                      value={displayName}
-                      onChange={(ev) => setDisplayName(ev.target.value)}
-                      autoComplete="name"
+                      name="displayName"
                       placeholder="Как к вам обращаться"
+                      autoComplete="name"
+                      value={displayName}
+                      onChange={(v) => setDisplayName(v)}
+                      size={InputSizes.SMALL}
+                      type={InputTypes.DEFAULT}
                     />
-                  </div>
-                )}
-                <div className="field">
-                  <label htmlFor="em">Email</label>
-                  <input
-                    id="em"
-                    type="email"
-                    value={email}
-                    onChange={(ev) => setEmail(ev.target.value)}
-                    autoComplete="email"
-                    placeholder="name@company.ru"
-                    required
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="pw">Пароль</label>
-                  <input
-                    id="pw"
-                    type="password"
-                    value={password}
-                    onChange={(ev) => setPassword(ev.target.value)}
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    placeholder={mode === 'login' ? 'Введите пароль' : 'Не менее 6 символов'}
-                    required
-                    minLength={mode === 'register' ? 6 : undefined}
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary auth-submit" disabled={authMut.isPending}>
-                  {authMut.isPending ? (
-                    <>
-                      <Loader2 size={18} strokeWidth={2} className="spin-inline" aria-hidden />
-                      Подождите…
-                    </>
-                  ) : mode === 'login' ? (
-                    'Войти'
-                  ) : (
-                    'Зарегистрироваться'
                   )}
-                </button>
+                  <InputField
+                    id="em"
+                    name="email"
+                    placeholder="Email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(v) => setEmail(v)}
+                    size={InputSizes.SMALL}
+                    type={InputTypes.EMAIL}
+                  />
+                  <InputField
+                    id="pw"
+                    name="password"
+                    placeholder={mode === 'login' ? 'Пароль' : 'Не менее 6 символов'}
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    value={password}
+                    onChange={(v) => setPassword(v)}
+                    size={InputSizes.SMALL}
+                    type={InputTypes.PASSWORD}
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  size={ButtonSizes.LARGE}
+                  color={ButtonColors.PRIMARY}
+                  variant={ButtonVariants.FILLED}
+                  loading={authMut.isPending}
+                  className="auth-submit"
+                >
+                  {mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
+                </Button>
               </form>
             </div>
 
