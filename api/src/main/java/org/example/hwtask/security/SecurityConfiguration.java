@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -29,7 +30,14 @@ public class SecurityConfiguration {
             Environment environment,
             JwtAuthenticationFilter jwtAuthenticationFilter
     ) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable);
+        http.csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers(
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/register",
+                        "/api/v1/auth/csrf"
+                )
+        );
         http.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         boolean testProfile = environment.acceptsProfiles(Profiles.of("test"));
@@ -43,6 +51,7 @@ public class SecurityConfiguration {
         } else {
             http.authorizeHttpRequests(a -> a
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf").permitAll()
                     .requestMatchers(
                             "/swagger-ui/**",
                             "/swagger-ui.html",

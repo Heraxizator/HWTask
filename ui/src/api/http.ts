@@ -1,19 +1,5 @@
 import type { ProblemDetailBody } from '../types/task';
 
-export const TOKEN_STORAGE_KEY = 'hwtask_token';
-
-export function getStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
-}
-
-export function setStoredToken(token: string): void {
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
-}
-
-export function clearStoredToken(): void {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
-}
-
 export class ApiError extends Error {
   readonly status: number;
   readonly problem?: ProblemDetailBody;
@@ -57,11 +43,25 @@ export async function parseJsonResponse<T>(res: Response): Promise<T> {
   return body as T;
 }
 
+function readCookie(name: string): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const parts = document.cookie.split(';').map((p) => p.trim());
+  for (const p of parts) {
+    if (!p) continue;
+    const idx = p.indexOf('=');
+    if (idx < 0) continue;
+    const k = decodeURIComponent(p.slice(0, idx));
+    if (k !== name) continue;
+    return decodeURIComponent(p.slice(idx + 1));
+  }
+  return undefined;
+}
+
 function authHeaders(init?: HeadersInit): Headers {
   const headers = new Headers(init);
-  const token = getStoredToken();
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+  const csrf = readCookie('XSRF-TOKEN');
+  if (csrf && !headers.has('X-XSRF-TOKEN')) {
+    headers.set('X-XSRF-TOKEN', csrf);
   }
   if (!headers.has('Accept')) {
     headers.set('Accept', 'application/json');
@@ -75,6 +75,7 @@ export async function fetchJson<T>(
 ): Promise<T> {
   const res = await fetch(input, {
     ...init,
+    credentials: 'include',
     headers: authHeaders(init?.headers),
   });
   return parseJsonResponse<T>(res);
@@ -84,6 +85,7 @@ export async function fetchJson<T>(
 export async function fetchVoid(input: RequestInfo, init?: RequestInit): Promise<void> {
   const res = await fetch(input, {
     ...init,
+    credentials: 'include',
     headers: authHeaders(init?.headers),
   });
   if (res.ok && res.status === 204) return;
@@ -94,6 +96,7 @@ export async function fetchVoid(input: RequestInfo, init?: RequestInit): Promise
 export async function fetchBlob(input: RequestInfo, init?: RequestInit): Promise<Blob> {
   const res = await fetch(input, {
     ...init,
+    credentials: 'include',
     headers: authHeaders(init?.headers),
   });
   if (!res.ok) {
@@ -128,6 +131,6 @@ export async function fetchJsonMultipart<T>(
   formData: FormData,
 ): Promise<T> {
   const headers = authHeaders();
-  const res = await fetch(input, { method: 'POST', headers, body: formData });
+  const res = await fetch(input, { method: 'POST', credentials: 'include', headers, body: formData });
   return parseJsonResponse<T>(res);
 }

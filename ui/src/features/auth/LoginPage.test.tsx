@@ -4,10 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { login } from '../../api/auth';
-import { setStoredToken } from '../../api/http';
 import { LoginPage } from './LoginPage';
 
 vi.mock('../../api/auth', () => ({
+  logout: vi.fn(() => Promise.resolve()),
+  // /api/v1/auth/csrf warmup
+  // (fetchJson is mocked only indirectly, so here we just keep the call sites happy)
+  // login/register mocks return accessToken for backward compatibility (ignored by UI).
   login: vi.fn(() =>
     Promise.resolve({
       accessToken: 'tok',
@@ -25,8 +28,6 @@ vi.mock('../../api/auth', () => ({
 }));
 
 vi.mock('../../api/http', () => ({
-  clearStoredToken: vi.fn(),
-  setStoredToken: vi.fn(),
   ApiError: class extends Error {},
 }));
 
@@ -105,6 +106,5 @@ describe('LoginPage smoke', () => {
       expect(onLoggedIn).toHaveBeenCalled();
     });
     expect(vi.mocked(login)).toHaveBeenCalledWith('demo@hwtask.local', 'demo');
-    expect(vi.mocked(setStoredToken)).toHaveBeenCalledWith('tok');
   });
 });

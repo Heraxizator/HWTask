@@ -2,6 +2,7 @@ package org.example.hwtask.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
@@ -17,9 +18,11 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final org.example.hwtask.identity.service.AuthCookieProperties cookieProperties;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, org.example.hwtask.identity.service.AuthCookieProperties cookieProperties) {
         this.jwtService = jwtService;
+        this.cookieProperties = cookieProperties;
     }
 
     @Override
@@ -28,23 +31,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (header != null && header.startsWith("Bearer ")) {
-            String raw = header.substring(7).trim();
-            if (!raw.isEmpty()) {
-                try {
-                    UserPrincipal principal = jwtService.parse(raw);
-                    var auth = new UsernamePasswordAuthenticationToken(
-                            principal,
-                            null,
-                            principal.getAuthorities()
-                    );
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                } catch (RuntimeException ignored) {
-                    SecurityContextHolder.clearContext();
-                }
+        String token = readCookie(request, cookieProperties.accessName());
+        if (token == null || token.isBlank()) {
+            String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+            if (header != null && header.startsWith("Bearer ")) {
+                token = header.substring(7).trim();
+            }
+        }
+
+        if (token != null && !token.isBlank()) {
+            try {
+                UserPrincipal principal = jwtService.parse(token);
+                var auth = new UsernamePasswordAuthenticationToken(
+                        principal,
+                        null,
+                        principal.getAuthorities()
+                );
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (RuntimeException ignored) {
+                SecurityContextHolder.clearContext();
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private static String readCookie(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return null;
+        for (Cookie c : cookies) {
+            if (name.equals(c.getName())) {
+                return c.getValue();
+            }
+        }
+        return null;
     }
 }

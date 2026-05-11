@@ -24,8 +24,12 @@ public class JwtService {
     }
 
     public String createToken(User user) {
+        return createToken(user, properties.expirationMs());
+    }
+
+    public String createToken(User user, long ttlMs) {
         Instant now = Instant.now();
-        Instant exp = now.plusMillis(properties.expirationMs());
+        Instant exp = now.plusMillis(ttlMs);
         return Jwts.builder()
                 .subject(user.getId().toString())
                 .claim("email", user.getEmail())

@@ -42,6 +42,10 @@ services:
       # Обязателен непустой секрет; иначе Spring не сможет создать JwtProperties (см. .env.example).
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env e.g. openssl rand -base64 48}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      # Cookie auth: для docker Secure=false (HTTP). В prod выставьте true и используйте HTTPS терминацию.
+      HWTASK_AUTH_COOKIE_SECURE: ${HWTASK_AUTH_COOKIE_SECURE:-false}
+      HWTASK_AUTH_COOKIE_SAMESITE: ${HWTASK_AUTH_COOKIE_SAMESITE:-Lax}
+      HWTASK_AUTH_COOKIE_DOMAIN: ${HWTASK_AUTH_COOKIE_DOMAIN:-}
     volumes:
       - hwtask_app_data:/data
     depends_on:

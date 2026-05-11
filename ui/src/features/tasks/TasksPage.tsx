@@ -54,7 +54,7 @@ import {
   ButtonSizes,
   ButtonVariants,
 } from '../../portal-ui';
-import { ApiError, clearStoredToken } from '../../api/http';
+import { ApiError } from '../../api/http';
 import { getMe } from '../../api/me';
 import { listOrganizations, listProjects } from '../../api/workspace';
 import type { CreateTaskRequest, UpdateTaskRequest } from '../../types/task';
@@ -515,7 +515,6 @@ export function TasksPage({ onLogout }: { onLogout: () => void }) {
         }}
         onOpenTrash={() => setTrashOpen(true)}
         onLogout={() => {
-          clearStoredToken();
           onLogout();
         }}
       />

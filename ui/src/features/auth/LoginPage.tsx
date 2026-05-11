@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { AlertCircle, KanbanSquare } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { login, register } from '../../api/auth';
-import { ApiError, clearStoredToken, setStoredToken } from '../../api/http';
+import { ApiError } from '../../api/http';
 import {
   Button,
   ButtonColors,
@@ -37,14 +37,12 @@ export function LoginPage({
 
   const authMut = useMutation({
     mutationFn: async () => {
-      clearStoredToken();
       if (mode === 'login') {
         return login(email.trim(), password);
       }
       return register(email.trim(), password, displayName.trim() || email.trim());
     },
-    onSuccess: (data) => {
-      setStoredToken(data.accessToken);
+    onSuccess: () => {
       setError(null);
       onLoggedIn();
     },
