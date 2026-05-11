@@ -1,4 +1,4 @@
-package org.example.hwtask.automation.web.dto;
+package org.example.hwtask.automation.dto;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

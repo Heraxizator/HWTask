@@ -2,8 +2,8 @@ package org.example.hwtask.automation.service;
 
 import org.example.hwtask.automation.persistence.AutomationRule;
 import org.example.hwtask.automation.persistence.AutomationRuleRepository;
-import org.example.hwtask.automation.web.dto.AutomationRuleResponse;
-import org.example.hwtask.automation.web.dto.CreateAutomationRuleRequest;
+import org.example.hwtask.automation.dto.AutomationRuleResponse;
+import org.example.hwtask.automation.dto.CreateAutomationRuleRequest;
 import org.example.hwtask.identity.service.AccessControlService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

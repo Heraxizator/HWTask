@@ -1,4 +1,4 @@
-package org.example.hwtask.reports.web.dto;
+package org.example.hwtask.reports.dto;
 
 public record TaskSummaryReportResponse(
         long total,

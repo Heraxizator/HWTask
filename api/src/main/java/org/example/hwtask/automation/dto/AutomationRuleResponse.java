@@ -1,4 +1,4 @@
-package org.example.hwtask.automation.web.dto;
+package org.example.hwtask.automation.dto;
 
 import org.example.hwtask.automation.persistence.RuleActionType;
 import org.example.hwtask.automation.persistence.RuleTriggerType;

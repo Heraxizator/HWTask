@@ -1,10 +1,12 @@
 package org.example.hwtask.security;
 
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,8 +17,7 @@ class HwtaskConfigurationPropertiesTest {
     class JwtPropertiesBinding {
 
         private final ApplicationContextRunner runner = new ApplicationContextRunner()
-                .withUserConfiguration(EnableJwtProperties.class)
-                .withConfiguration(ValidationAutoConfiguration.class);
+                .withUserConfiguration(ValidationSupport.class, EnableJwtProperties.class);
 
         @Test
         void bindsSecretAndExpirationFromProperties() {
@@ -52,8 +53,7 @@ class HwtaskConfigurationPropertiesTest {
     class AttachmentStoragePropertiesBinding {
 
         private final ApplicationContextRunner runner = new ApplicationContextRunner()
-                .withUserConfiguration(EnableStorageProperties.class)
-                .withConfiguration(ValidationAutoConfiguration.class);
+                .withUserConfiguration(ValidationSupport.class, EnableStorageProperties.class);
 
         @Test
         void bindsAttachmentsDir() {
@@ -69,6 +69,15 @@ class HwtaskConfigurationPropertiesTest {
         void rejectsBlankAttachmentsDir() {
             runner.withPropertyValues("hwtask.storage.attachments-dir=")
                     .run(context -> assertThat(context).hasFailed());
+        }
+    }
+
+    /** Бин {@link Validator} для привязки {@code @Validated} {@code @ConfigurationProperties} в тестовом контексте. */
+    @Configuration
+    static class ValidationSupport {
+        @Bean
+        Validator validator() {
+            return Validation.buildDefaultValidatorFactory().getValidator();
         }
     }
 

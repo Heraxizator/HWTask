@@ -76,7 +76,7 @@ class TaskRepositoryTest {
     }
 
     @Test
-    void deleteRemovesEntity() {
+    void softDeleteHidesTaskFromQueries() {
         Task saved = taskRepository.save(new Task(projectId, null, null, null, null, "Temp", null, TaskStatus.TODO, null));
         var id = saved.getId();
 

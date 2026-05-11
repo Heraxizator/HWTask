@@ -3,7 +3,7 @@ package org.example.hwtask.reports.web;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.hwtask.reports.service.ReportsService;
-import org.example.hwtask.reports.web.dto.TaskSummaryReportResponse;
+import org.example.hwtask.reports.dto.TaskSummaryReportResponse;
 import org.example.hwtask.security.UserPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;

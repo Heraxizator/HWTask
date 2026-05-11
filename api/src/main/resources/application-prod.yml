@@ -1,3 +1,11 @@
+# OpenAPI/Swagger отключены в prod по умолчанию; для внутренней среды включите:
+# springdoc.api-docs.enabled=true и springdoc.swagger-ui.enabled=true
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL}

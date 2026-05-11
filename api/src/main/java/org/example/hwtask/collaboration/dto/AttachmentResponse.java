@@ -1,4 +1,4 @@
-package org.example.hwtask.collaboration.web.dto;
+package org.example.hwtask.collaboration.dto;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

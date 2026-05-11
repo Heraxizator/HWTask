@@ -138,7 +138,7 @@ class DefaultTaskServiceTest {
     }
 
     @Test
-    void deleteCallsRepositoryWhenPresent() {
+    void deleteSoftDeletesWhenPresent() {
         UUID id = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         Task task = new Task(UUID.randomUUID(), null, null, userId, null, "x", null, TaskStatus.TODO, null);
@@ -147,6 +147,6 @@ class DefaultTaskServiceTest {
 
         service.delete(userId, id);
 
-        verify(taskRepository).deleteById(id);
+        verify(taskRepository).delete(task);
     }
 }

@@ -10,12 +10,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "tasks")
+@SQLDelete(sql = "UPDATE tasks SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class Task {
 
     @Id
@@ -56,6 +60,9 @@ public class Task {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     protected Task() {
     }
@@ -108,4 +115,8 @@ public class Task {
     public void setPriority(TaskPriority priority) { this.priority = priority; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
 }

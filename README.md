@@ -112,6 +112,11 @@ JDBC: `jdbc:postgresql://localhost:<POSTGRES_PORT>/<POSTGRES_DB>` — те же 
 | `prod` | Прод: `SPRING_DATASOURCE_*`, при необходимости `MANAGEMENT_PORT` ([`api/src/main/resources/application-prod.yml`](api/src/main/resources/application-prod.yml)) |
 | `docker` | Контейнер API: источник данных из переменных Compose |
 
+### Production и доступ к API
+
+- **Не включайте профиль `test` в production.** В тестах допускается ослабленная авторизация (`hwtask.security.relaxed-authorization`, см. [`SecurityConfiguration`](api/src/main/java/org/example/hwtask/security/SecurityConfiguration.java)); для боевого режима используйте профиль **`prod`** и обычную JWT-защиту эндпоинтов.
+- В профиле **`prod`** по умолчанию отключены **OpenAPI JSON и Swagger UI** ([`application-prod.yml`](api/src/main/resources/application-prod.yml): `springdoc.api-docs.enabled` и `springdoc.swagger-ui.enabled`). Для внутренней отладки их можно снова включить переопределением конфигурации (например переменными окружения `SPRINGDOC_API_DOCS_ENABLED`, `SPRINGDOC_SWAGGER_UI_ENABLED`).
+
 ## Сборка и тесты
 
 Сборка JAR API:

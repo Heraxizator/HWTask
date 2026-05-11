@@ -1,7 +1,7 @@
 package org.example.hwtask.reports.service;
 
 import org.example.hwtask.identity.service.AccessControlService;
-import org.example.hwtask.reports.web.dto.TaskSummaryReportResponse;
+import org.example.hwtask.reports.dto.TaskSummaryReportResponse;
 import org.example.hwtask.task.persistence.TaskRepository;
 import org.example.hwtask.task.persistence.TaskStatus;
 import org.springframework.stereotype.Service;

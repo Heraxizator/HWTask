@@ -1,4 +1,4 @@
-package org.example.hwtask.collaboration.web.dto;
+package org.example.hwtask.collaboration.dto;
 
 import org.example.hwtask.collaboration.persistence.TaskActivityType;
 

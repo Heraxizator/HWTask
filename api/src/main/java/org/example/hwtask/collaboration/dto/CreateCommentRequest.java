@@ -1,4 +1,4 @@
-package org.example.hwtask.collaboration.web.dto;
+package org.example.hwtask.collaboration.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

@@ -24,8 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -97,7 +100,7 @@ class DefaultTaskService implements TaskService {
         activityRecorder.record(saved.getId(), currentUserId, TaskActivityType.CREATED,
                 "Задача создана: " + saved.getTitle());
 
-        return map(saved.getId());
+        return map(saved);
     }
 
     @Override
@@ -105,7 +108,7 @@ class DefaultTaskService implements TaskService {
     public TaskResponse get(UUID currentUserId, UUID taskId) {
         Task task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
         accessControlService.assertProjectMember(task.getProjectId(), currentUserId);
-        return map(taskId);
+        return map(task);
     }
 
     @Override
@@ -113,7 +116,9 @@ class DefaultTaskService implements TaskService {
     public Page<TaskResponse> list(UUID currentUserId, UUID projectId, Pageable pageable) {
         accessControlService.assertProjectMember(projectId, currentUserId);
         Pageable safe = sanitizePageable(pageable);
-        return taskRepository.findByProjectId(projectId, safe).map(t -> map(t.getId()));
+        Page<Task> page = taskRepository.findByProjectId(projectId, safe);
+        Map<UUID, List<TaskMember>> extrasByTaskId = taskMembersByTaskId(idsOnPage(page));
+        return page.map(t -> TaskDtoMapper.toResponse(t, extrasByTaskId.getOrDefault(t.getId(), List.of())));
     }
 
     @Override
@@ -121,8 +126,10 @@ class DefaultTaskService implements TaskService {
     public List<TaskResponse> listSubtasks(UUID currentUserId, UUID parentTaskId) {
         Task parent = taskRepository.findById(parentTaskId).orElseThrow(() -> new TaskNotFoundException(parentTaskId));
         accessControlService.assertProjectMember(parent.getProjectId(), currentUserId);
-        return taskRepository.findByParentTaskIdOrderByCreatedAtAsc(parentTaskId).stream()
-                .map(t -> map(t.getId()))
+        List<Task> subtasks = taskRepository.findByParentTaskIdOrderByCreatedAtAsc(parentTaskId);
+        Map<UUID, List<TaskMember>> extrasByTaskId = taskMembersByTaskId(subtasks.stream().map(Task::getId).toList());
+        return subtasks.stream()
+                .map(t -> TaskDtoMapper.toResponse(t, extrasByTaskId.getOrDefault(t.getId(), List.of())))
                 .toList();
     }
 
@@ -161,7 +168,7 @@ class DefaultTaskService implements TaskService {
             automationRuleProcessor.onStatusChanged(task, oldStatus, currentUserId);
         }
 
-        return map(taskId);
+        return map(task);
     }
 
     @Override
@@ -172,13 +179,27 @@ class DefaultTaskService implements TaskService {
         if (taskRepository.countByParentTaskId(taskId) > 0) {
             throw new IllegalArgumentException("Сначала удалите подзадачи");
         }
-        taskRepository.deleteById(taskId);
+        taskRepository.delete(task);
     }
 
-    private TaskResponse map(UUID taskId) {
-        Task task = taskRepository.findById(taskId).orElseThrow(() -> new TaskNotFoundException(taskId));
-        List<TaskMember> extras = taskMemberRepository.findByIdTaskId(taskId);
+    private TaskResponse map(Task task) {
+        List<TaskMember> extras = taskMemberRepository.findByIdTaskId(task.getId());
         return TaskDtoMapper.toResponse(task, extras);
+    }
+
+    private static List<UUID> idsOnPage(Page<Task> page) {
+        return page.getContent().stream().map(Task::getId).toList();
+    }
+
+    private Map<UUID, List<TaskMember>> taskMembersByTaskId(Collection<UUID> taskIds) {
+        if (taskIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, List<TaskMember>> grouped = new HashMap<>();
+        for (TaskMember m : taskMemberRepository.findByIdTaskIdIn(taskIds)) {
+            grouped.computeIfAbsent(m.getId().getTaskId(), k -> new ArrayList<>()).add(m);
+        }
+        return grouped;
     }
 
     private void assertProjectMember(UUID projectId, UUID userId) {

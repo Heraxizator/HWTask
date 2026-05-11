@@ -1,4 +1,4 @@
-package org.example.hwtask.automation.web.dto;
+package org.example.hwtask.automation.dto;
 
 import jakarta.validation.constraints.NotNull;
 import org.example.hwtask.automation.persistence.RuleActionType;
