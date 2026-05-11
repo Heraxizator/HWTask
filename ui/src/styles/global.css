@@ -126,14 +126,7 @@ body {
 }
 
 .app-header::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  height: 3px;
-  background: var(--color-primary-main);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  content: none;
 }
 
 .app-header__brand {

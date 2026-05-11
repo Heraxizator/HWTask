@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,4 +32,40 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, JpaSpecificat
             and t.status <> :done
             """)
     long countOverdue(@Param("projectId") UUID projectId, @Param("now") Instant now, @Param("done") TaskStatus done);
+
+    @Query(value = """
+            SELECT DATE(t.created_at) AS day, COUNT(*) AS cnt
+            FROM tasks t
+            WHERE t.project_id = :projectId
+              AND t.deleted_at IS NULL
+              AND t.created_at >= :from
+              AND t.created_at < :to
+            GROUP BY DATE(t.created_at)
+            ORDER BY day
+            """, nativeQuery = true)
+    List<Object[]> countCreatedByDay(@Param("projectId") UUID projectId, @Param("from") Instant from, @Param("to") Instant to);
+
+    @Query(value = """
+            SELECT DATE(t.updated_at) AS day, COUNT(*) AS cnt
+            FROM tasks t
+            WHERE t.project_id = :projectId
+              AND t.deleted_at IS NULL
+              AND t.status = 'DONE'
+              AND t.updated_at >= :from
+              AND t.updated_at < :to
+            GROUP BY DATE(t.updated_at)
+            ORDER BY day
+            """, nativeQuery = true)
+    List<Object[]> countDoneByDay(@Param("projectId") UUID projectId, @Param("from") Instant from, @Param("to") Instant to);
+
+    @Query(value = """
+            SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600.0), 0)
+            FROM tasks t
+            WHERE t.project_id = :projectId
+              AND t.deleted_at IS NULL
+              AND t.status = 'DONE'
+              AND t.updated_at >= :from
+              AND t.updated_at < :to
+            """, nativeQuery = true)
+    double avgLeadTimeHoursForDoneTasks(@Param("projectId") UUID projectId, @Param("from") Instant from, @Param("to") Instant to);
 }

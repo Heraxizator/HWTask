@@ -6,7 +6,7 @@ import {
   deleteAutomationRule,
   listAutomationRules,
 } from '../../../api/automation';
-import { getProjectTimeSummary, getTaskSummary } from '../../../api/reports';
+import { getProjectExtendedStats, getProjectTimeSummary, getTaskSummary } from '../../../api/reports';
 import { ApiError } from '../../../api/http';
 import type { OrganizationResponse } from '../../../types/task';
 import {
@@ -29,6 +29,25 @@ import {
 } from '../../../portal-ui';
 import { formatDurationSeconds } from '../taskDisplay';
 
+function shortDate(isoDay: string): string {
+  // isoDay = yyyy-mm-dd
+  const [, m, d] = isoDay.split('-');
+  return `${d}.${m}`;
+}
+
+function spark(values: number[], width = 140, height = 26): string {
+  if (!values.length) return '';
+  const max = Math.max(1, ...values);
+  const step = values.length === 1 ? 0 : width / (values.length - 1);
+  return values
+    .map((v, i) => {
+      const x = i * step;
+      const y = height - (v / max) * (height - 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+
 export function ReportsModal({
   open,
   projectId,
@@ -46,6 +65,11 @@ export function ReportsModal({
   const timeQ = useQuery({
     queryKey: ['reports', 'time-summary', projectId],
     queryFn: () => getProjectTimeSummary(projectId!),
+    enabled: open && !!projectId,
+  });
+  const extQ = useQuery({
+    queryKey: ['reports', 'extended', projectId],
+    queryFn: () => getProjectExtendedStats(projectId!),
     enabled: open && !!projectId,
   });
 
@@ -132,6 +156,53 @@ export function ReportsModal({
                     </p>
                   )}
                 </>
+              )}
+            </section>
+            <section>
+              <h3 className="subsection-head">Динамика (30 дней)</h3>
+              {extQ.isLoading ? (
+                <p className="muted">Загрузка…</p>
+              ) : extQ.error ? (
+                <p className="alert" role="alert">
+                  {extQ.error instanceof Error ? extQ.error.message : 'Ошибка'}
+                </p>
+              ) : (
+                <div style={{ display: 'grid', gap: '0.85rem' }}>
+                  <div className="detail-well" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: 'var(--color-text-01)' }}>Создано</div>
+                      <div className="muted" style={{ fontSize: '0.85rem' }}>
+                        {extQ.data?.throughputCreated?.length ? `${shortDate(extQ.data.throughputCreated[0].day)} → ${shortDate(extQ.data.throughputCreated[extQ.data.throughputCreated.length - 1].day)}` : '—'}
+                      </div>
+                    </div>
+                    <svg width="140" height="26" viewBox="0 0 140 26" aria-hidden>
+                      <polyline
+                        fill="none"
+                        stroke="var(--color-primary-main)"
+                        strokeWidth="2"
+                        points={spark((extQ.data?.throughputCreated ?? []).map((x) => x.count))}
+                      />
+                    </svg>
+                  </div>
+
+                  <div className="detail-well" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: 'var(--color-text-01)' }}>Закрыто</div>
+                      <div className="muted" style={{ fontSize: '0.85rem' }}>
+                        Среднее время до DONE: <strong>{extQ.data?.avgLeadTimeHours ?? 0}ч</strong>
+                      </div>
+                    </div>
+                    <svg width="140" height="26" viewBox="0 0 140 26" aria-hidden>
+                      <polyline
+                        fill="none"
+                        stroke="var(--color-text-01)"
+                        strokeOpacity="0.65"
+                        strokeWidth="2"
+                        points={spark((extQ.data?.throughputDone ?? []).map((x) => x.count))}
+                      />
+                    </svg>
+                  </div>
+                </div>
               )}
             </section>
           </div>

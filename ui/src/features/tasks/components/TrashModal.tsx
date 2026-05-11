@@ -80,7 +80,8 @@ export function TrashModal({
             ))}
           </ul>
         )}
-        <div className="modal-actions" style={{ marginTop: '0.5rem' }}>
+        <div className="modal-form__footer">
+          <div className="modal-actions">
           <Button
             type="button"
             variant={ButtonVariants.GHOST}
@@ -90,6 +91,7 @@ export function TrashModal({
           >
             Закрыть
           </Button>
+          </div>
         </div>
       </div>
     </div>
