@@ -15,7 +15,7 @@
     <description>HWTask — REST API для управления задачами (Spring Boot)</description>
     <properties>
         <java.version>25</java.version>
-        <spring-modulith.version>2.0.6</spring-modulith.version>
+        <spring-modulith.version>2.1.0</spring-modulith.version>
         <springdoc.version>3.0.3</springdoc.version>
         <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
